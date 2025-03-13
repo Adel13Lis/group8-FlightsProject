@@ -59,7 +59,8 @@ st.markdown("""
 
 def load_data(query):
     """Helper function to load data from the SQLite database."""
-    with sqlite3.connect("../flights_database.db") as conn:
+    with sqlite3.connect("/Users/monika/projectFlights-group8-1/flights_database.db") as conn:
+        cursor = conn.cursor()
         df = pd.read_sql_query(query, conn)
     return df
 
@@ -75,7 +76,14 @@ st.markdown("""
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
+nyc_airports = ('JFK', 'LGA', 'EWR')
 
+
+#######################################################
+# ALL QUERIES USED IN THE DASHBOARD
+#######################################################
+
+# QUERYING: total flights, percentage delayed, percentage missing arrival time
 query_summary = """
 SELECT 
     COUNT(*) as total_flights,
@@ -85,23 +93,154 @@ SELECT
 FROM flights
 WHERE origin IN ('JFK','EWR','LGA');
 """
+
+query_top_dest = """
+    SELECT 
+        dest, 
+        COUNT(*) as flight_count,
+        (SELECT name FROM airports WHERE faa = dest LIMIT 1) as dest_name
+    FROM flights
+    WHERE origin IN ('JFK','EWR','LGA')
+    GROUP BY dest
+    ORDER BY flight_count DESC
+    LIMIT 1
+    """
+
+# QUERYING: top destination from NYC airports
+def query_top_dest_from(airports):
+    return f"""
+    SELECT 
+        dest, 
+        COUNT(*) as flight_count,
+        (SELECT name FROM airports WHERE faa = dest LIMIT 1) as dest_name
+    FROM flights
+    WHERE origin = {airport}
+    GROUP BY dest
+    ORDER BY flight_count DESC
+    LIMIT 1
+    """
+
+# QUERYING: all routes from NYC airports
+query_routes_all = """
+    SELECT 
+        origin, 
+        dest, 
+        COUNT(*) as flight_count
+    FROM flights
+    WHERE origin IN ('JFK', 'LGA', 'EWR')
+    GROUP BY origin, dest
+    """
+
+# QUERYING: all routes from the chosen airport
+def query_routes_from(airport):
+    return f"""
+    SELECT
+        origin,
+        dest,
+        COUNT(*) as flight_count
+    FROM flights
+    WHERE origin = '{airport}'
+    GROUP BY origin, dest
+    """
+
+
+
+def query_average_distances(airports):
+    if type(airports) == str:
+        return f"""
+        SELECT 
+            origin, 
+            dest, 
+            AVG(distance) as Distance
+        FROM flights
+        WHERE origin = '{airports}'
+        GROUP BY dest
+        """
+    else:
+        return f"""
+        SELECT
+            origin,
+            dest,
+            AVG(distance) as Distance   
+        FROM flights
+        WHERE origin IN {airports}
+        GROUP BY origin, dest
+        """
+
+# QUERYING: all airports
+query_airports = """
+    SELECT 
+        a.faa, a.name, a.lat, a.lon, 
+        CAST(IFNULL(alt, 0) AS INTEGER) as Altitude,
+        tz as Timezone
+    FROM airports a
+    """
+
+airports_df = load_data(query_airports)
+airports_df['is_nyc'] = airports_df['faa'].apply(
+        lambda x: x in ['JFK', 'LGA', 'EWR']
+    )
+
+# QUERYING: all routes from a specific airport
+# pass airport as a tuple
+def select_to_airport(airports):
+    return f"""
+        SELECT 
+            origin, 
+            dest, 
+            COUNT(*) as flight_count
+        FROM flights
+        WHERE origin IN {airports}
+        GROUP BY origin, dest
+        """
+
+# QUERYING: delay distribution from airport
+def query_delay_distribution(airports): 
+    return f"""
+        SELECT 
+            'On Time' as delay_category,
+            COUNT(*) as flight_count,
+            ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+        FROM flights
+        WHERE origin IN {airports} AND arr_delay <= 0
+        UNION ALL
+        SELECT 
+            'Minor (≤15 min)' as delay_category,
+            COUNT(*) as flight_count,
+            ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+        FROM flights
+        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 0 AND arr_delay <= 15
+        UNION ALL
+        SELECT 
+            'Moderate (16-30 min)' as delay_category,
+            COUNT(*) as flight_count,
+            ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+        FROM flights
+        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 15 AND arr_delay <= 30
+        UNION ALL
+        SELECT 
+            'Significant (31-60 min)' as delay_category,
+            COUNT(*) as flight_count,
+            ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+        FROM flights
+        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 30 AND arr_delay <= 60
+        UNION ALL
+        SELECT 
+            'Severe (>60 min)' as delay_category,
+            COUNT(*) as flight_count,
+            ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+        FROM flights
+        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 60
+        """
+# --------------------
+
 df_summary = load_data(query_summary)
 
 total_flights = int(df_summary['total_flights'][0])
 delay_arrival_percentage = df_summary['delay_arrival_percentage'][0]
 missing_arrival_percentage = df_summary['missing_arrival_percentage'][0]
 
-query_top_dest = """
-SELECT 
-    dest, 
-    COUNT(*) as flight_count,
-    (SELECT name FROM airports WHERE faa = dest LIMIT 1) as dest_name
-FROM flights
-WHERE origin IN ('JFK','EWR','LGA')
-GROUP BY dest
-ORDER BY flight_count DESC
-LIMIT 1
-"""
+
 df_top_dest = load_data(query_top_dest)
 top_destination = df_top_dest['dest'][0]
 top_dest_name = df_top_dest['dest_name'][0]
@@ -129,52 +268,65 @@ with col_left:
     """.format(total_flights, delay_arrival_percentage, top_destination, top_dest_count, top_dest_name),
         unsafe_allow_html=True)
 
+
+
 with col_right:
-    query_airports = """
-    SELECT 
-        faa, name, lat, lon, 
-        CAST(IFNULL(alt, 0) AS INTEGER) as altitude
-    FROM airports
-    WHERE lat IS NOT NULL AND lon IS NOT NULL
-    """
+    # Create filters for airports and type of coloring
+    col1, col2 = st.columns(2)
 
-    airports_df = load_data(query_airports)
+    with col1:
+        all_airports_bool = st.toggle("Show data for all origin airports", True)
+        if not all_airports_bool:
+            origin_airport = st.selectbox("Select the origin airport", nyc_airports, index=0)
+            routes_df = load_data(query_routes_from(origin_airport))
+            airports_df_map = airports_df[airports_df['faa'].isin(routes_df['dest'].unique())]
+            connected_airports = set(routes_df['dest'].unique())
+            connected_airports.add(origin_airport)
+            airports_df_map['has_connection'] = airports_df_map['faa'].apply(
+                lambda x: x in connected_airports
+            )
+        else:
+            origin_airport = nyc_airports
+            airports_df_map = airports_df
+            routes_df = load_data(query_routes_all)
+            connected_airports = set(routes_df['dest'].unique())
+            connected_airports.update(['JFK', 'LGA', 'EWR'])
+            airports_df_map['has_connection'] = airports_df_map['faa'].apply(
+                lambda x: x in connected_airports
+            )
 
-    airports_df['is_nyc'] = airports_df['faa'].apply(
-        lambda x: x in ['JFK', 'LGA', 'EWR']
+    with col2:
+        color_by = st.selectbox("Color by", ['Altitude', 'Distance', 'Timezone'])
+
+    
+
+    if color_by == 'Distance':
+        airports_df_map = airports_df_map[airports_df_map['has_connection'] == True]
+
+    average_distances = load_data(query_average_distances(origin_airport))
+    airports_df_map = airports_df_map.merge(
+        average_distances,
+        how='left',
+        left_on='faa',
+        right_on='dest',
+        suffixes=('', '_dest')
     )
-
-    query_routes = """
-    SELECT 
-        origin, 
-        dest, 
-        COUNT(*) as flight_count
-    FROM flights
-    WHERE origin IN ('JFK', 'LGA', 'EWR')
-    GROUP BY origin, dest
-    """
-    routes_df = load_data(query_routes)
-
-    connected_airports = set(routes_df['dest'].unique())
-    connected_airports.update(['JFK', 'LGA', 'EWR'])
-    airports_df['has_connection'] = airports_df['faa'].apply(
-        lambda x: x in connected_airports
-    )
-
+        
     fig_map = px.scatter_geo(
-        airports_df,
+        airports_df_map,
         lat='lat',
         lon='lon',
         hover_name='name',
         hover_data={
             'faa': True,
-            'altitude': True,
+            'Altitude': True,
             'is_nyc': False,
             'has_connection': False,
-            'lat': False,
-            'lon': False
+            'lat': True,
+            'lon': True,
+            'Distance': True,
         },
-        color='altitude',
+        color=color_by,
         color_continuous_scale='Viridis',
         size_max=10,
         opacity=0.8,
@@ -184,21 +336,14 @@ with col_right:
     fig_map.update_traces(
         marker=dict(
             size=airports_df.apply(
-                lambda x: 10 if x['is_nyc'] else (
-                    5 if x['has_connection'] else 3),
+                lambda x: 20 if x['is_nyc'] else (
+                    10 if x['has_connection'] else 5),
                 axis=1
             ),
             line=dict(width=1, color='rgba(255, 255, 255, 0.5)')
         )
     )
 
-    fig_map.update_coloraxes(
-        colorbar=dict(
-            title='Altitude (ft)',
-            title_font=dict(color='black'),
-            tickfont=dict(color='black')
-        )
-    )
 
     fig_map.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
@@ -216,7 +361,7 @@ with col_right:
     )
 
     st.markdown('<div>', unsafe_allow_html=True)
-    st.markdown('<h3 style="text-align: center;">Destination ariports by altitude</h3>',
+    st.markdown('<h3 style="text-align: center;">Destination ariports</h3>',
                 unsafe_allow_html=True)
     st.plotly_chart(fig_map, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -232,43 +377,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Delay Distribution Overview")
 
-    query_delay_distribution = """
-    SELECT 
-        'On Time' as delay_category,
-        COUNT(*) as flight_count,
-        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
-    FROM flights
-    WHERE origin IN ('JFK','EWR','LGA') AND arr_delay <= 0
-    UNION ALL
-    SELECT 
-        'Minor (≤15 min)' as delay_category,
-        COUNT(*) as flight_count,
-        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
-    FROM flights
-    WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 0 AND arr_delay <= 15
-    UNION ALL
-    SELECT 
-        'Moderate (16-30 min)' as delay_category,
-        COUNT(*) as flight_count,
-        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
-    FROM flights
-    WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 15 AND arr_delay <= 30
-    UNION ALL
-    SELECT 
-        'Significant (31-60 min)' as delay_category,
-        COUNT(*) as flight_count,
-        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
-    FROM flights
-    WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 30 AND arr_delay <= 60
-    UNION ALL
-    SELECT 
-        'Severe (>60 min)' as delay_category,
-        COUNT(*) as flight_count,
-        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
-    FROM flights
-    WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 60
-    """
-    df_delay = load_data(query_delay_distribution)
+    df_delay = load_data(query_delay_distribution(nyc_airports))
 
     colors = ['#1B5E20', '#2E7D32', '#388E3C', '#43A047', '#66BB6A']
 
