@@ -196,42 +196,80 @@ def select_to_airport(airports):
 
 # QUERYING: delay distribution from airport
 def query_delay_distribution(airports): 
-    return f"""
+    if type(airports) == str:
+        return f"""
         SELECT 
             'On Time' as delay_category,
             COUNT(*) as flight_count,
             ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
         FROM flights
-        WHERE origin IN {airports} AND arr_delay <= 0
+        WHERE origin = '{airports}' AND arr_delay <= 0
         UNION ALL
         SELECT 
             'Minor (≤15 min)' as delay_category,
             COUNT(*) as flight_count,
             ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
         FROM flights
-        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 0 AND arr_delay <= 15
+        WHERE origin = '{airports}' AND arr_delay > 0 AND arr_delay <= 15
         UNION ALL
         SELECT 
             'Moderate (16-30 min)' as delay_category,
             COUNT(*) as flight_count,
             ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
         FROM flights
-        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 15 AND arr_delay <= 30
+        WHERE origin = '{airports}' AND arr_delay > 15 AND arr_delay <= 30
         UNION ALL
         SELECT 
             'Significant (31-60 min)' as delay_category,
             COUNT(*) as flight_count,
             ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
         FROM flights
-        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 30 AND arr_delay <= 60
+        WHERE origin = '{airports}' AND arr_delay > 30 AND arr_delay <= 60
         UNION ALL
         SELECT 
             'Severe (>60 min)' as delay_category,
             COUNT(*) as flight_count,
             ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
         FROM flights
-        WHERE origin IN ('JFK','EWR','LGA') AND arr_delay > 60
+        WHERE origin = '{airports}' AND arr_delay > 60
         """
+    else: 
+        return f"""
+            SELECT 
+                'On Time' as delay_category,
+                COUNT(*) as flight_count,
+                ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+            FROM flights
+            WHERE origin IN {airports} AND arr_delay <= 0
+            UNION ALL
+            SELECT 
+                'Minor (≤15 min)' as delay_category,
+                COUNT(*) as flight_count,
+                ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+            FROM flights
+            WHERE origin IN {airports} AND arr_delay > 0 AND arr_delay <= 15
+            UNION ALL
+            SELECT 
+                'Moderate (16-30 min)' as delay_category,
+                COUNT(*) as flight_count,
+                ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+            FROM flights
+            WHERE origin IN {airports} AND arr_delay > 15 AND arr_delay <= 30
+            UNION ALL
+            SELECT 
+                'Significant (31-60 min)' as delay_category,
+                COUNT(*) as flight_count,
+                ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+            FROM flights
+            WHERE origin IN {airports} AND arr_delay > 30 AND arr_delay <= 60
+            UNION ALL
+            SELECT 
+                'Severe (>60 min)' as delay_category,
+                COUNT(*) as flight_count,
+                ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA') AND arr_delay IS NOT NULL), 2) as percentage
+            FROM flights
+            WHERE origin IN {airports} AND arr_delay > 60
+            """
 # --------------------
 
 df_summary = load_data(query_summary)
@@ -335,7 +373,7 @@ with col_right:
 
     fig_map.update_traces(
         marker=dict(
-            size=airports_df.apply(
+            size=airports_df_map.apply(
                 lambda x: 20 if x['is_nyc'] else (
                     10 if x['has_connection'] else 5),
                 axis=1
@@ -377,7 +415,15 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Delay Distribution Overview")
 
-    df_delay = load_data(query_delay_distribution(nyc_airports))
+    cola, colb = st.columns(2)
+
+    with cola:
+        all_airports_delays = st.toggle("Show data for all origin airports", True, key='delay_dist')
+        df_delay = load_data(query_delay_distribution(nyc_airports))
+    with colb:
+        if not all_airports_delays:
+            airport = st.selectbox("Select the origin airport", nyc_airports, index=0)
+            df_delay = load_data(query_delay_distribution(airport))
 
     colors = ['#1B5E20', '#2E7D32', '#388E3C', '#43A047', '#66BB6A']
 
@@ -421,21 +467,34 @@ with col2:
             WHEN origin = 'LGA' THEN 'LaGuardia (LGA)'
             WHEN origin = 'EWR' THEN 'Newark Liberty (EWR)'
         END as airport_name,
-        COUNT(*) as flights,
-        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin IN ('JFK','EWR','LGA')), 1) as percentage
-    FROM flights
+        COUNT(*) as flights_count,
+        SUM(p.seats) as seats_sum,
+        COUNT(DISTINCT f.dest) as destinations_count
+    FROM flights f
+    JOIN planes p ON f.tailnum = p.tailnum
     WHERE origin IN ('JFK','EWR','LGA')
     GROUP BY origin
-    ORDER BY flights DESC
+    ORDER BY flights_count DESC
     """
+
     df_airports = load_data(query_airport_volume)
+
+    flights_or_seats = st.selectbox("Show the distribution for total flights or total seats",
+                                    ['Total Flights', 'Total Seats', 'Destinations served'], index=0)
+    
+    if flights_or_seats == 'Total Flights':
+        data_col = 'flights_count'
+    elif flights_or_seats == 'Total Seats':
+        data_col = 'seats_sum'
+    else:
+        data_col = 'destinations_count'
 
     colors = ['#004D40', '#00796B', '#009688']
 
     fig_airports = px.pie(
         df_airports,
         names='airport_name',
-        values='flights',
+        values=data_col,
         color_discrete_sequence=colors,
         hole=0.4,
         height=400
@@ -450,7 +509,7 @@ with col2:
 
     fig_airports.update_layout(
         annotations=[dict(
-            text=f"{df_airports['flights'].sum():,}<br>Flights",
+            text=f"{df_airports[data_col].sum():,}<br>Flights",
             x=0.5, y=0.5,
             font_size=18,
             showarrow=False
