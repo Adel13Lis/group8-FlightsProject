@@ -131,8 +131,68 @@ if analysis_mode == "Airport Analysis":
         st.warning(
             f"No flights found for {origin_airport} in the selected date range.")
     else:
-        st.warning(airport_data)
+        col1, col2 = st.columns([1, 3])
 
+        with col1:
+            st.markdown("<div>", unsafe_allow_html=True)
+            st.subheader("Airport Metrics")
+
+            total_flights = len(airport_data)
+            avg_dep_delay = airport_data['dep_delay'].mean(
+            ) if not airport_data['dep_delay'].empty else 0
+            avg_arr_delay = airport_data['arr_delay'].mean(
+            ) if not airport_data['arr_delay'].empty else 0
+            delayed_flights = airport_data[airport_data['dep_delay']
+                                           > 15].shape[0]
+            delay_rate = (delayed_flights / total_flights) * \
+                100 if total_flights > 0 else 0
+
+            st.metric("Total Flights", f"{total_flights}")
+            st.metric("Average Departure Delay", f"{avg_dep_delay:.1f} min")
+            st.metric("Average Arrival Delay", f"{avg_arr_delay:.1f} min")
+            st.metric("Delayed Flights (>15min)", f"{delay_rate:.1f}%")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("<div>", unsafe_allow_html=True)
+            st.subheader("Daily Delay Distribution")
+
+            # Group by date and calculate average delays
+            daily_delays = airport_data.copy()
+            daily_delays['date'] = pd.to_datetime(
+                daily_delays[['year', 'month', 'day']])
+            daily_delays = daily_delays.groupby('date').agg({
+                'dep_delay': 'mean',
+                'arr_delay': 'mean'
+            }).reset_index()
+
+            fig_daily = go.Figure()
+            fig_daily.add_trace(go.Bar(
+                x=daily_delays['date'],
+                y=daily_delays['dep_delay'],
+                name='Departure Delay',
+                marker_color='#4285F4'
+            ))
+            fig_daily.add_trace(go.Bar(
+                x=daily_delays['date'],
+                y=daily_delays['arr_delay'],
+                name='Arrival Delay',
+                marker_color='#EA4335'
+            ))
+            fig_daily.update_layout(
+                barmode='group',
+                xaxis_title='Date',
+                yaxis_title='Average Delay (minutes)',
+                legend=dict(orientation="h", yanchor="bottom",
+                            y=1.02, xanchor="right", x=1),
+                height=400,
+                margin=dict(l=40, r=40, t=40, b=40)
+            )
+            st.plotly_chart(fig_daily, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+
+################
 
 st.markdown("""
 <div style="text-align:center; margin-top: 40px; padding: 20px; color: #6c757d;">
