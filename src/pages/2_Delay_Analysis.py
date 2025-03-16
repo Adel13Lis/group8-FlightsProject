@@ -45,12 +45,47 @@ st.markdown("""
         width: 100%;
         height: 400px;
     }
-    /* Toggle button styling */
     .toggle-container {
         display: flex;
         justify-content: center;
         margin-bottom: 15px;
     }
+    .flight-info-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            margin-bottom: 20px;
+        }
+        .flight-info-card h4 {
+            margin-top: 0;
+            color: #1E1E1E;
+        }
+        .flight-detail {
+            font-size: 14px;
+            color: #5B5B5B;
+            margin: 5px 0;
+        }
+        .delay-badge {
+            background-color: #EA4335;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 500;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .on-time-badge {
+            background-color: #34A853;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 500;
+            display: inline-block;
+            margin-left: 8px;
+        }
 </style>
 """, unsafe_allow_html=True)
 
@@ -576,15 +611,15 @@ elif analysis_mode == "Specific Route Analysis":
 
             if pd.notna(flight_row.get('dep_delay', 0)) and flight_row.get('dep_delay', 0) > 15:
                 is_delayed = True
-                delay_badge = "<span>DELAYED</span>"
+                delay_badge = "<span class='delay-badge'>DELAYED</span>"
             else:
-                delay_badge = "<span>ON TIME</span>"
+                delay_badge = "<span class='on-time-badge'>ON TIME</span>"
 
             st.markdown(f"""
-            <div>
+            <div class="flight-info-card">
                 <h4>Flight {flight_row['carrier']}{flight_row['flight']} {delay_badge}</h4>
-                <div><strong>Date:</strong> {flight_date}</div>
-                <div><strong>Departure:</strong> {dep_time_formatted} | <strong>Arrival:</strong> {arr_time_formatted}</div>
+                <div class="flight-detail"><strong>Date:</strong> {flight_date}</div>
+                <div class="flight-detail"><strong>Departure:</strong> {dep_time_formatted} | <strong>Arrival:</strong> {arr_time_formatted}</div>
             </div>
             """, unsafe_allow_html=True)
 
