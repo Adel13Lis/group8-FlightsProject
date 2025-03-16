@@ -364,6 +364,7 @@ elif analysis_mode == "Specific Route Analysis":
     dest_tzone = dest_airports[dest_airports['faa']
                                == dest_airport]['tzone'].values[0]
 
+    # Query for Route data
     route_query = f"""
     SELECT
         f.year, f.month, f.day,
@@ -391,8 +392,24 @@ elif analysis_mode == "Specific Route Analysis":
     ORDER BY
         f.year, f.month, f.day, f.dep_time
     """
-
     route_data = run_query(route_query)
+
+    # Query for weather data
+    weather_query = f"""
+    SELECT
+        w.origin, w.year, w.month, w.day, w.hour,
+        w.temp, w.dewp, w.humid, w.wind_dir, w.wind_speed, w.wind_gust,
+        w.precip, w.pressure, w.visib
+    FROM
+        weather w
+    WHERE
+        w.origin = '{origin_airport}'
+        AND date(w.year || '-' || PRINTF('%02d', w.month) || '-' || PRINTF('%02d', w.day))
+            BETWEEN date('{start_date_str}') AND date('{end_date_str}')
+    ORDER BY
+        w.year, w.month, w.day, w.hour
+    """
+    weather_data = run_query(weather_query)
 
     if route_data.empty:
         st.warning(
