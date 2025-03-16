@@ -3,7 +3,9 @@ import sqlite3
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', "flights_database.db")
 
 st.set_page_config(
     page_title="NYC Flights Dashboard",
@@ -59,7 +61,7 @@ st.markdown("""
 
 def load_data(query):
     """Helper function to load data from the SQLite database."""
-    with sqlite3.connect("/Users/monika/projectFlights-group8-1/flights_database.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         df = pd.read_sql_query(query, conn)
     return df
@@ -107,6 +109,8 @@ query_top_dest = """
     """
 
 # QUERYING: top destination from NYC airports
+
+
 def query_top_dest_from(airports):
     return f"""
     SELECT 
@@ -120,6 +124,7 @@ def query_top_dest_from(airports):
     LIMIT 1
     """
 
+
 # QUERYING: all routes from NYC airports
 query_routes_all = """
     SELECT 
@@ -132,6 +137,8 @@ query_routes_all = """
     """
 
 # QUERYING: all routes from the chosen airport
+
+
 def query_routes_from(airport):
     return f"""
     SELECT
@@ -142,7 +149,6 @@ def query_routes_from(airport):
     WHERE origin = '{airport}'
     GROUP BY origin, dest
     """
-
 
 
 def query_average_distances(airports):
@@ -167,6 +173,7 @@ def query_average_distances(airports):
         GROUP BY origin, dest
         """
 
+
 # QUERYING: all airports
 query_airports = """
     SELECT 
@@ -178,11 +185,13 @@ query_airports = """
 
 airports_df = load_data(query_airports)
 airports_df['is_nyc'] = airports_df['faa'].apply(
-        lambda x: x in ['JFK', 'LGA', 'EWR']
-    )
+    lambda x: x in ['JFK', 'LGA', 'EWR']
+)
 
 # QUERYING: all routes from a specific airport
 # pass airport as a tuple
+
+
 def select_to_airport(airports):
     return f"""
         SELECT 
@@ -195,7 +204,9 @@ def select_to_airport(airports):
         """
 
 # QUERYING: delay distribution from airport
-def query_delay_distribution(airports): 
+
+
+def query_delay_distribution(airports):
     if type(airports) == str:
         return f"""
         SELECT 
@@ -233,7 +244,7 @@ def query_delay_distribution(airports):
         FROM flights
         WHERE origin = '{airports}' AND arr_delay > 60
         """
-    else: 
+    else:
         return f"""
             SELECT 
                 'On Time' as delay_category,
@@ -272,6 +283,7 @@ def query_delay_distribution(airports):
             """
 # --------------------
 
+
 df_summary = load_data(query_summary)
 
 total_flights = int(df_summary['total_flights'][0])
@@ -307,17 +319,19 @@ with col_left:
         unsafe_allow_html=True)
 
 
-
 with col_right:
     # Create filters for airports and type of coloring
     col1, col2 = st.columns(2)
 
     with col1:
-        all_airports_bool = st.toggle("Show data for all origin airports", True)
+        all_airports_bool = st.toggle(
+            "Show data for all origin airports", True)
         if not all_airports_bool:
-            origin_airport = st.selectbox("Select the origin airport", nyc_airports, index=0)
+            origin_airport = st.selectbox(
+                "Select the origin airport", nyc_airports, index=0)
             routes_df = load_data(query_routes_from(origin_airport))
-            airports_df_map = airports_df[airports_df['faa'].isin(routes_df['dest'].unique())]
+            airports_df_map = airports_df[airports_df['faa'].isin(
+                routes_df['dest'].unique())]
             connected_airports = set(routes_df['dest'].unique())
             connected_airports.add(origin_airport)
             airports_df_map['has_connection'] = airports_df_map['faa'].apply(
@@ -334,9 +348,8 @@ with col_right:
             )
 
     with col2:
-        color_by = st.selectbox("Color by", ['Altitude', 'Distance', 'Timezone'])
-
-    
+        color_by = st.selectbox(
+            "Color by", ['Altitude', 'Distance', 'Timezone'])
 
     if color_by == 'Distance':
         airports_df_map = airports_df_map[airports_df_map['has_connection'] == True]
@@ -349,7 +362,7 @@ with col_right:
         right_on='dest',
         suffixes=('', '_dest')
     )
-        
+
     fig_map = px.scatter_geo(
         airports_df_map,
         lat='lat',
@@ -381,7 +394,6 @@ with col_right:
             line=dict(width=1, color='rgba(255, 255, 255, 0.5)')
         )
     )
-
 
     fig_map.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
@@ -418,11 +430,13 @@ with col1:
     cola, colb = st.columns(2)
 
     with cola:
-        all_airports_delays = st.toggle("Show data for all origin airports", True, key='delay_dist')
+        all_airports_delays = st.toggle(
+            "Show data for all origin airports", True, key='delay_dist')
         df_delay = load_data(query_delay_distribution(nyc_airports))
     with colb:
         if not all_airports_delays:
-            airport = st.selectbox("Select the origin airport", nyc_airports, index=0)
+            airport = st.selectbox(
+                "Select the origin airport", nyc_airports, index=0)
             df_delay = load_data(query_delay_distribution(airport))
 
     colors = ['#1B5E20', '#2E7D32', '#388E3C', '#43A047', '#66BB6A']
@@ -481,7 +495,7 @@ with col2:
 
     flights_or_seats = st.selectbox("Show the distribution for total flights or total seats",
                                     ['Total Flights', 'Total Seats', 'Destinations served'], index=0)
-    
+
     if flights_or_seats == 'Total Flights':
         data_col = 'flights_count'
     elif flights_or_seats == 'Total Seats':
