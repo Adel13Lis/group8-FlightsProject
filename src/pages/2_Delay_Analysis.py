@@ -763,6 +763,104 @@ elif analysis_mode == "Specific Route Analysis":
                     st.warning(
                         "No weather data available for wind direction analysis.")
 
+            with wind_cols[1]:  # Add wind impact analysis in a 2x2 grid format
+                if not wind_data.empty:
+                    wind_impact = "favorable" if is_favorable else "unfavorable"
+                    wind_angle_formatted = f"{wind_flight_angle:.1f}°"
+
+                    # --- Define your box styles in a <style> block ---
+                    st.markdown("""
+                    <style>
+                    .box {
+                        background-color: white;
+                        border-radius: 8px;
+                        padding: 15px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+                        margin-bottom: 20px; /* Space under each box if you stack them */
+                        height: 100%; /* Make all boxes the same height */
+                    }
+                    .box-title {
+                        font-size: 16px;
+                        color: #5B5B5B;
+                        font-weight: 500;
+                        margin-bottom: 5px;
+                    }
+                    .box-value {
+                        font-size: 24px;
+                        font-weight: 600;
+                        margin-bottom: 5px;
+                    }
+                    .box-subtitle {
+                        font-size: 14px;
+                        color: #5B5B5B;
+                    }
+                    .favorable {
+                        color: #34A853;
+                    }
+                    .unfavorable {
+                        color: #EA4335;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+
+                    # Create two rows for the 2x2 grid
+                    # First row
+                    row1_col1, row1_col2 = st.columns(2, gap="medium")
+
+                    # Second row
+                    row2_col1, row2_col2 = st.columns(2, gap="medium")
+
+                    # Place each info-box in its own column to create a 2x2 grid
+                    with row1_col1:
+                        st.markdown(f"""
+                        <div class="box">
+                            <div class="box-title">Flight Direction</div>
+                            <div class="box-value">{flight_bearing:.1f}°</div>
+                            <div class="box-subtitle">Where the flight is heading to</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    with row1_col2:
+                        st.markdown(f"""
+                        <div class="box">
+                            <div class="box-title">Wind Direction</div>
+                            <div class="box-value">{avg_wind_dir:.1f}°</div>
+                            <div class="box-subtitle">Where the wind is going to</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    with row2_col1:
+                        st.markdown(f"""
+                        <div class="box">
+                            <div class="box-title">Wind Speed</div>
+                            <div class="box-value">{avg_wind_speed:.1f} knots</div>
+                            <div class="box-subtitle">Average during flight time</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    with row2_col2:
+                        # Calculate estimated fuel impact and time impact based on wind conditions
+                        if is_favorable:
+                            fuel_impact = "Expected lower fuel consumption"
+                            icon = "↗️"  # Up arrow for favorable
+                        else:
+                            fuel_impact = "Expected higher fuel consumption"
+                            icon = "↘️"  # Down arrow for unfavorable
+
+                        st.markdown(f"""
+                        <div class="box">
+                            <div class="box-title">Wind Impact</div>
+                            <div class="box-value {wind_impact.lower()}">{wind_impact.capitalize()} {icon}</div>
+                            <div class="box-subtitle">{fuel_impact}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+        else:
+            st.warning(
+                "No route data available. Please select a departure and arrival airport, and date range.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
 ################
 
 st.markdown("""
