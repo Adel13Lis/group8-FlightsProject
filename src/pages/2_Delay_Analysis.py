@@ -7,6 +7,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from textwrap import dedent
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "..",
+                       "..", "flights_database.db")
 
 st.set_page_config(page_title="Flight Delay Analysis",
                    layout="wide", initial_sidebar_state="expanded")
@@ -46,7 +50,7 @@ st.markdown("""
 
 
 def get_connection():
-    return sqlite3.connect('flights_database.db')
+    return sqlite3.connect(DB_PATH)
 
 
 def run_query(query):
