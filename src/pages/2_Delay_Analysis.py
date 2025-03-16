@@ -69,7 +69,7 @@ def run_query(query):
 
 # Dashboard title
 st.title("✈️ Flight Delay Analysis Dashboard")
-st.markdown("<div class='card'><p>This dashboard analyzes flight delays with a focus on NYC airports. Select your analysis mode below.</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='card'><p>This page analyzes flight delays with a focus on NYC airports. Select your analysis mode below.</p></div>", unsafe_allow_html=True)
 
 # Analysis mode selection
 analysis_mode = st.radio(
@@ -300,6 +300,69 @@ if analysis_mode == "Airport Analysis":
                 f"No destinations with sufficient flights found for {delay_type} analysis.")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+
+# SPECIFIC ROUTE ANALYSIS MODE
+elif analysis_mode == "Specific Route Analysis":
+    st.sidebar.subheader("Route Selection")
+
+    dest_airports_query = """
+    SELECT DISTINCT a.faa, a.name, a.tzone
+    FROM airports a
+    JOIN flights f ON a.faa = f.dest
+    WHERE f.origin IN ('JFK', 'LGA', 'EWR')
+    ORDER BY a.name
+    """
+    dest_airports = run_query(dest_airports_query)
+
+    # Route selection
+    origin_airport = st.sidebar.selectbox(
+        "Departure Airport",
+        nyc_airports['faa'],
+        format_func=lambda x: f"{x} - {nyc_airports[nyc_airports['faa'] == x]['name'].values[0]}")
+
+    dest_airport = st.sidebar.selectbox(
+        "Arrival Airport",
+        dest_airports['faa'],
+        format_func=lambda x: f"{x} - {dest_airports[dest_airports['faa'] == x]['name'].values[0]}"
+    )
+
+    dest_tzone = dest_airports[dest_airports['faa']
+                               == dest_airport]['tzone'].values[0]
+
+    route_query = f"""
+    SELECT
+        f.year, f.month, f.day,
+        f.dep_time, f.sched_dep_time, f.dep_delay,
+        f.arr_time, f.sched_arr_time, f.arr_delay,
+        f.carrier, f.flight, f.tailnum, f.origin, f.dest,
+        f.air_time, f.distance,
+        al.name as airline_name,
+        orig.name as origin_name, orig.lat as origin_lat, orig.lon as origin_lon,
+        dest.name as dest_name, dest.lat as dest_lat, dest.lon as dest_lon,
+        dest.tzone as dest_tzone
+    FROM
+        flights f
+    JOIN
+        airlines al ON f.carrier = al.carrier
+    JOIN
+        airports orig ON f.origin = orig.faa
+    JOIN
+        airports dest ON f.dest = dest.faa
+    WHERE
+        f.origin = '{origin_airport}'
+        AND f.dest = '{dest_airport}'
+        AND date(f.year || '-' || PRINTF('%02d', f.month) || '-' || PRINTF('%02d', f.day))
+            BETWEEN date('{start_date_str}') AND date('{end_date_str}')
+    ORDER BY
+        f.year, f.month, f.day, f.dep_time
+    """
+
+    route_data = run_query(route_query)
+
+    st.markdown(route_data)
+
+################
 
 st.markdown("""
 <div style="text-align:center; margin-top: 40px; padding: 20px; color: #6c757d;">
