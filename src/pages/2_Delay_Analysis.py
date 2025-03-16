@@ -605,8 +605,6 @@ elif analysis_mode == "Specific Route Analysis":
 
             flight_options = dict(zip(flight_labels, flight_ids))
 
-            st.markdown("### Flight Selection")
-
             selected_flight_label = st.selectbox(
                 "Choose a flight to view its wind direction analysis:",
                 options=flight_labels,
@@ -763,12 +761,11 @@ elif analysis_mode == "Specific Route Analysis":
                     st.warning(
                         "No weather data available for wind direction analysis.")
 
-            with wind_cols[1]:  # Add wind impact analysis in a 2x2 grid format
+            with wind_cols[1]:
                 if not wind_data.empty:
                     wind_impact = "favorable" if is_favorable else "unfavorable"
                     wind_angle_formatted = f"{wind_flight_angle:.1f}°"
 
-                    # --- Define your box styles in a <style> block ---
                     st.markdown("""
                     <style>
                     .box {
@@ -803,7 +800,6 @@ elif analysis_mode == "Specific Route Analysis":
                     </style>
                     """, unsafe_allow_html=True)
 
-                    # Create two rows for the 2x2 grid
                     # First row
                     row1_col1, row1_col2 = st.columns(2, gap="medium")
 
