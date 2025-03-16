@@ -315,7 +315,6 @@ elif analysis_mode == "Specific Route Analysis":
     """
     dest_airports = run_query(dest_airports_query)
 
-    # Route selection
     origin_airport = st.sidebar.selectbox(
         "Departure Airport",
         nyc_airports['faa'],
@@ -364,7 +363,6 @@ elif analysis_mode == "Specific Route Analysis":
         st.warning(
             f"No flights found for the selected route ({origin_airport} to {dest_airport}) in the date range.")
     else:
-        # Container for key metrics and map
         col1, col2 = st.columns([1, 3])
 
         with col1:
@@ -390,7 +388,6 @@ elif analysis_mode == "Specific Route Analysis":
             st.markdown("<div>", unsafe_allow_html=True)
             st.subheader("Flight Route Map")
 
-            # Check if route data exists
             if not route_data.empty:
                 origin_lat = route_data['origin_lat'].iloc[0]
                 origin_lon = route_data['origin_lon'].iloc[0]
@@ -398,17 +395,14 @@ elif analysis_mode == "Specific Route Analysis":
                 dest_lon = route_data['dest_lon'].iloc[0]
                 dest_tzone = route_data['dest_tzone'].iloc[0]
 
-                # Create a map with the flight route
                 fig_map = go.Figure()
 
-                # Determine map scope based on destination timezone
                 if dest_tzone and (dest_tzone.startswith('Europe/') or dest_tzone.startswith('Pacific/')):
                     map_scope = 'world'
                 else:
                     map_scope = 'usa'
 
                 if map_scope == 'usa':
-                    # Add a simple outline of the US with state borders
                     fig_map.add_trace(go.Choropleth(
                         locations=["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
                                    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
@@ -424,7 +418,6 @@ elif analysis_mode == "Specific Route Analysis":
                         marker_line_width=0.5
                     ))
 
-                # Add flight route line
                 fig_map.add_trace(go.Scattergeo(
                     lon=[origin_lon, dest_lon],
                     lat=[origin_lat, dest_lat],
@@ -509,6 +502,99 @@ elif analysis_mode == "Specific Route Analysis":
                 st.warning("No route data available to display map")
 
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # Second row: Wind analysis and daily delays
+        st.markdown("<div>", unsafe_allow_html=True)
+        st.subheader("🌪️ Wind Direction and Flight Path Analysis")
+
+        if not route_data.empty:
+            if 'year' in route_data.columns and 'month' in route_data.columns and 'day' in route_data.columns and 'dep_time' in route_data.columns:
+                route_data = route_data.sort_values(
+                    by=['year', 'month', 'day', 'dep_time'])
+
+            flight_ids = route_data.index.tolist()
+
+            flight_labels = []
+            for idx in flight_ids:
+                flight_row = route_data.loc[idx]
+
+                flight_date = f"{flight_row['year']}-{flight_row['month']:02d}-{flight_row['day']:02d}"
+
+                dep_time = flight_row.get('dep_time', '')
+                if pd.notna(dep_time) and dep_time != '':
+                    dep_time_str = str(int(dep_time)).zfill(4) if isinstance(
+                        dep_time, (int, float)) else str(dep_time).zfill(4)
+                    dep_time_formatted = f"{dep_time_str[:2]}:{dep_time_str[2:]}"
+                else:
+                    dep_time_formatted = "N/A"
+
+                arr_time = flight_row.get('arr_time', '')
+                if pd.notna(arr_time) and arr_time != '':
+                    arr_time_str = str(int(arr_time)).zfill(4) if isinstance(
+                        arr_time, (int, float)) else str(arr_time).zfill(4)
+                    arr_time_formatted = f"{arr_time_str[:2]}:{arr_time_str[2:]}"
+                else:
+                    arr_time_formatted = "N/A"
+
+                dep_delay = flight_row.get('dep_delay', 0)
+                arr_delay = flight_row.get('arr_delay', 0)
+
+                delay_status = ""
+                if pd.notna(dep_delay) and dep_delay > 15:
+                    delay_status = " [DEPARTURE DELAYED]"
+                elif pd.notna(arr_delay) and arr_delay > 15:
+                    delay_status = " [ARRIVAL DELAYED]"
+
+                label = f"{flight_date} | Flight {flight_row['carrier']}{flight_row['flight']} | "
+                label += f"Dep: {dep_time_formatted} → Arr: {arr_time_formatted} | "
+                label += f"Tail: {flight_row.get('tailnum', 'N/A')}{delay_status}"
+
+                flight_labels.append(label)
+
+            flight_options = dict(zip(flight_labels, flight_ids))
+
+            st.markdown("### Flight Selection")
+
+            selected_flight_label = st.selectbox(
+                "Choose a flight to view its wind direction analysis:",
+                options=flight_labels,
+                index=0,
+            )
+
+            flight_row = route_data.loc[flight_options[selected_flight_label]]
+
+            dep_time_str = str(int(flight_row.get('dep_time', 0))).zfill(4)
+            dep_time_formatted = f"{dep_time_str[:2]}:{dep_time_str[2:]}"
+
+            arr_time_str = str(int(flight_row.get('arr_time', 0))).zfill(4)
+            arr_time_formatted = f"{arr_time_str[:2]}:{arr_time_str[2:]}"
+
+            flight_date = f"{flight_row['year']}-{flight_row['month']:02d}-{flight_row['day']:02d}"
+
+            is_delayed = False
+            delay_badge = ""
+
+            if pd.notna(flight_row.get('dep_delay', 0)) and flight_row.get('dep_delay', 0) > 15:
+                is_delayed = True
+                delay_badge = "<span>DELAYED</span>"
+            else:
+                delay_badge = "<span>ON TIME</span>"
+
+            st.markdown(f"""
+            <div>
+                <h4>Flight {flight_row['carrier']}{flight_row['flight']} {delay_badge}</h4>
+                <div><strong>Date:</strong> {flight_date}</div>
+                <div><strong>Departure:</strong> {dep_time_formatted} | <strong>Arrival:</strong> {arr_time_formatted}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            selected_flight_id = flight_options[selected_flight_label]
+            selected_flight = route_data.loc[selected_flight_id]
+
+            origin_lat = selected_flight['origin_lat'] if 'origin_lat' in selected_flight else origin_lat
+            origin_lon = selected_flight['origin_lon'] if 'origin_lon' in selected_flight else origin_lon
+            dest_lat = selected_flight['dest_lat'] if 'dest_lat' in selected_flight else dest_lat
+            dest_lon = selected_flight['dest_lon'] if 'dest_lon' in selected_flight else dest_lon
 
 ################
 
