@@ -648,6 +648,121 @@ elif analysis_mode == "Specific Route Analysis":
             dest_lat = selected_flight['dest_lat'] if 'dest_lat' in selected_flight else dest_lat
             dest_lon = selected_flight['dest_lon'] if 'dest_lon' in selected_flight else dest_lon
 
+            # Get weather data for the selected flight
+            if pd.notna(selected_flight['dep_time']) and selected_flight['dep_time'] != '':
+                if isinstance(selected_flight['dep_time'], (int, float)):
+                    dep_hour = int(selected_flight['dep_time'] // 100)
+                else:
+                    try:
+                        dep_hour = int(str(selected_flight['dep_time'])[:2])
+                    except:
+                        dep_hour = 12
+            else:
+                if pd.notna(selected_flight['sched_dep_time']) and selected_flight['sched_dep_time'] != '':
+                    if isinstance(selected_flight['sched_dep_time'], (int, float)):
+                        dep_hour = int(
+                            selected_flight['sched_dep_time'] // 100)
+                    else:
+                        try:
+                            dep_hour = int(
+                                str(selected_flight['sched_dep_time'])[:2])
+                        except:
+                            dep_hour = 12
+                else:
+                    dep_hour = 12
+
+            selected_weather_data = weather_data[
+                (weather_data['year'] == selected_flight['year']) &
+                (weather_data['month'] == selected_flight['month']) &
+                (weather_data['day'] == selected_flight['day'])
+            ]
+
+            if not selected_weather_data.empty and 'hour' in selected_weather_data.columns:
+                selected_weather_data['hour_diff'] = abs(
+                    selected_weather_data['hour'] - dep_hour)
+                min_hour_diff = selected_weather_data['hour_diff'].min()
+                selected_weather_data = selected_weather_data[
+                    selected_weather_data['hour_diff'] == min_hour_diff]
+
+            wind_cols = st.columns(2)
+
+            with wind_cols[0]:
+                def calculate_bearing(lat1, lon1, lat2, lon2):
+                    lat1, lon1, lat2, lon2 = map(
+                        math.radians, [lat1, lon1, lat2, lon2])
+                    dlon = lon2 - lon1
+                    y = math.sin(dlon) * math.cos(lat2)
+                    x = math.cos(lat1) * math.sin(lat2) - \
+                        math.sin(lat1) * math.cos(lat2) * \
+                        math.cos(dlon)
+                    initial_bearing = math.atan2(y, x)
+                    initial_bearing = math.degrees(initial_bearing)
+                    compass_bearing = (initial_bearing + 360) % 360
+                    return compass_bearing
+
+                flight_bearing = calculate_bearing(
+                    origin_lat, origin_lon,
+                    dest_lat, dest_lon
+                )
+
+                if not selected_weather_data.empty:
+                    wind_data = selected_weather_data.dropna(
+                        subset=['wind_dir', 'wind_speed'])
+
+                    if not wind_data.empty:
+                        avg_wind_dir = wind_data['wind_dir'].mean()
+                        avg_wind_speed = wind_data['wind_speed'].mean()
+
+                        wind_flight_angle = (
+                            avg_wind_dir - flight_bearing + 360) % 360
+
+                        is_favorable = (wind_flight_angle < 45) or (
+                            wind_flight_angle > 315)
+
+                        fig_polar = go.Figure()
+
+                        fig_polar.add_trace(go.Scatterpolar(
+                            r=[0, 1],
+                            theta=[flight_bearing, flight_bearing],
+                            mode='lines',
+                            line=dict(color='#4285F4', width=4),
+                            name=f'Flight Direction ({flight_bearing:.1f}°)'
+                        ))
+
+                        fig_polar.add_trace(go.Scatterpolar(
+                            r=[0, avg_wind_speed /
+                                max(wind_data['wind_speed'].max(), 1)],
+                            theta=[avg_wind_dir, avg_wind_dir],
+                            mode='lines',
+                            line=dict(color='#FBBC05', width=4),
+                            name=f'Wind Direction ({avg_wind_dir:.1f}°)'
+                        ))
+
+                        fig_polar.update_layout(
+                            polar=dict(
+                                radialaxis=dict(visible=True, range=[0, 1]),
+                                angularaxis=dict(
+                                    tickmode='array',
+                                    tickvals=[0, 45, 90, 135,
+                                              180, 225, 270, 315],
+                                    ticktext=['N', 'NE', 'E', 'SE',
+                                              'S', 'SW', 'W', 'NW'],
+                                    direction="clockwise",
+                                    rotation=90
+                                )
+                            ),
+                            showlegend=True,
+                            height=400
+                        )
+
+                        st.plotly_chart(fig_polar, use_container_width=True)
+                    else:
+                        st.warning(
+                            "No wind data available for the selected flight.")
+                else:
+                    st.warning(
+                        "No weather data available for wind direction analysis.")
+
 ################
 
 st.markdown("""
