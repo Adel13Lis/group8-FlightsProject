@@ -360,7 +360,155 @@ elif analysis_mode == "Specific Route Analysis":
 
     route_data = run_query(route_query)
 
-    st.markdown(route_data)
+    if route_data.empty:
+        st.warning(
+            f"No flights found for the selected route ({origin_airport} to {dest_airport}) in the date range.")
+    else:
+        # Container for key metrics and map
+        col1, col2 = st.columns([1, 3])
+
+        with col1:
+            st.markdown("<div>", unsafe_allow_html=True)
+            st.subheader("Route Metrics")
+
+            total_flights = len(route_data)
+            avg_dep_delay = route_data['dep_delay'].mean(
+            ) if not route_data['dep_delay'].empty else 0
+            avg_arr_delay = route_data['arr_delay'].mean(
+            ) if not route_data['arr_delay'].empty else 0
+            delayed_flights = route_data[route_data['dep_delay'] > 15].shape[0]
+            delay_rate = (delayed_flights / total_flights) * \
+                100 if total_flights > 0 else 0
+
+            st.metric("Total Flights", f"{total_flights}")
+            st.metric("Average Departure Delay", f"{avg_dep_delay:.1f} min")
+            st.metric("Average Arrival Delay", f"{avg_arr_delay:.1f} min")
+            st.metric("Delayed Flights (>15min)", f"{delay_rate:.1f}%")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("<div>", unsafe_allow_html=True)
+            st.subheader("Flight Route Map")
+
+            # Check if route data exists
+            if not route_data.empty:
+                origin_lat = route_data['origin_lat'].iloc[0]
+                origin_lon = route_data['origin_lon'].iloc[0]
+                dest_lat = route_data['dest_lat'].iloc[0]
+                dest_lon = route_data['dest_lon'].iloc[0]
+                dest_tzone = route_data['dest_tzone'].iloc[0]
+
+                # Create a map with the flight route
+                fig_map = go.Figure()
+
+                # Determine map scope based on destination timezone
+                if dest_tzone and (dest_tzone.startswith('Europe/') or dest_tzone.startswith('Pacific/')):
+                    map_scope = 'world'
+                else:
+                    map_scope = 'usa'
+
+                if map_scope == 'usa':
+                    # Add a simple outline of the US with state borders
+                    fig_map.add_trace(go.Choropleth(
+                        locations=["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+                                   "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+                                   "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+                                   "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+                                   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"],
+                        locationmode="USA-states",
+                        z=[0] * 50,  # Just to create the outline
+                        colorscale=[[0, 'rgba(255,255,255,0)'], [
+                            1, 'rgba(255,255,255,0)']],
+                        showscale=False,
+                        marker_line_color='rgb(150, 150, 150)',
+                        marker_line_width=0.5
+                    ))
+
+                # Add flight route line
+                fig_map.add_trace(go.Scattergeo(
+                    lon=[origin_lon, dest_lon],
+                    lat=[origin_lat, dest_lat],
+                    mode='lines',
+                    line=dict(width=3, color='#4285F4'),
+                    opacity=0.8,
+                    name='Flight Path'
+                ))
+
+                fig_map.add_trace(go.Scattergeo(
+                    lon=[origin_lon, dest_lon],
+                    lat=[origin_lat, dest_lat],
+                    mode='markers',
+                    marker=dict(
+                        size=10,
+                        color=['#6A0DAD', '#6A0DAD'],
+                        symbol='circle'
+                    ),
+                    text=[origin_airport, dest_airport],
+                    hoverinfo='text',
+                    name='Airports'
+                ))
+
+                if map_scope == 'usa':
+                    geo_layout = dict(
+                        scope='usa',
+                        projection_type='albers usa',
+                        showland=True,
+                        landcolor='rgb(255, 255, 255)',
+                        countrycolor='rgb(255, 255, 255)',
+                        lakecolor='rgb(255, 255, 255)',
+                        showlakes=True,
+                        showocean=True,
+                        oceancolor='rgb(255, 255, 255)',
+                        showcoastlines=True,
+                        coastlinecolor='rgb(150, 150, 150)',
+                        showframe=False,
+                        showcountries=True,
+                        countrywidth=0.5,
+                        showsubunits=True,
+                        subunitwidth=0.5,
+                        subunitcolor='rgb(150, 150, 150)'
+                    )
+                else:
+                    geo_layout = dict(
+                        scope='world',
+                        projection_type='natural earth',
+                        showland=True,
+                        landcolor='rgb(255, 255, 255)',
+                        countrycolor='rgb(150, 150, 150)',
+                        lakecolor='rgb(255, 255, 255)',
+                        showlakes=True,
+                        showocean=True,
+                        oceancolor='rgb(255, 255, 255)',
+                        showcoastlines=True,
+                        coastlinecolor='rgb(150, 150, 150)',
+                        showframe=False,
+                        showcountries=True,
+                        countrywidth=0.5,
+                        showsubunits=True,
+                        subunitwidth=0.5,
+                        subunitcolor='rgb(150, 150, 150)',
+                    )
+
+                fig_map.update_layout(
+                    geo=geo_layout,
+                    height=400,
+                    margin=dict(l=0, r=0, t=10, b=0),
+                    paper_bgcolor='rgb(255, 255, 255)',
+                    plot_bgcolor='rgb(255, 255, 255)',
+                    legend=dict(
+                        yanchor="top",
+                        y=0.99,
+                        xanchor="left",
+                        x=0.01,
+                        bgcolor="rgba(255, 255, 255, 0.7)"
+                    )
+                )
+
+                st.plotly_chart(fig_map, use_container_width=True)
+            else:
+                st.warning("No route data available to display map")
+
+            st.markdown("</div>", unsafe_allow_html=True)
 
 ################
 
