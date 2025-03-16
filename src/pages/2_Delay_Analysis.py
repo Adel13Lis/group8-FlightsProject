@@ -99,6 +99,41 @@ start_date_str = start_date.strftime('%Y-%m-%d')
 end_date_str = end_date.strftime('%Y-%m-%d')
 
 
+# AIRPORT ANALYSIS MODE
+if analysis_mode == "Airport Analysis":
+    st.sidebar.subheader("Airport Selection")
+    origin_airport = st.sidebar.selectbox(
+        "Select Airport", nyc_airports['faa'],
+        format_func=lambda x: f"{x} - {nyc_airports[nyc_airports['faa'] == x]['name'].values[0]}")
+
+    # Query for airport data
+    airport_query = f"""
+    SELECT
+        f.year, f.month, f.day,
+        f.dep_time, f.dep_delay,
+        f.arr_delay, f.carrier,
+        f.origin, f.dest,
+        f.distance,
+        al.name as airline_name
+    FROM
+        flights f
+    JOIN
+        airlines al ON f.carrier = al.carrier
+    WHERE
+        f.origin = '{origin_airport}'
+        AND date(f.year || '-' || PRINTF('%02d', f.month) || '-' || PRINTF('%02d', f.day))
+            BETWEEN date('{start_date_str}') AND date('{end_date_str}')
+    """
+
+    airport_data = run_query(airport_query)
+
+    if airport_data.empty:
+        st.warning(
+            f"No flights found for {origin_airport} in the selected date range.")
+    else:
+        st.warning(airport_data)
+
+
 st.markdown("""
 <div style="text-align:center; margin-top: 40px; padding: 20px; color: #6c757d;">
     <p>✈️ Flight Delay Analysis Dashboard | Data Engineering Project</p>
