@@ -45,6 +45,12 @@ st.markdown("""
         width: 100%;
         height: 400px;
     }
+    /* Toggle button styling */
+    .toggle-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -193,104 +199,106 @@ if analysis_mode == "Airport Analysis":
 
         # Second row
         st.markdown("<div>", unsafe_allow_html=True)
-        st.subheader("Top 5 Destinations with Highest Departure Delays")
 
-        # Get top delayed destinations with at least 10 flights
+        chart_title = f"Top 5 Destinations with Highest Delay"
+
+        st.subheader(chart_title)
+
+        delay_type = st.radio(
+            "Select Delay Type:",
+            ["Departure Delays", "Arrival Delays"],
+            horizontal=True,
+            key="delay_type_toggle"
+        )
+
+        delay_column = 'dep_delay' if delay_type == "Departure Delays" else 'arr_delay'
+        chart_color = '#1E3A8A' if delay_type == "Departure Delays" else '#E1A95F'
+
         top_delayed_destinations = (
             airport_data.groupby(['dest'])
             .agg({
-                'dep_delay': ['mean', 'count'],
-                'airline_name': 'first'  # Keep an airline name for reference
+                delay_column: ['mean', 'count'],
+                'airline_name': 'first'
             })
             .reset_index()
         )
 
-        # Flatten the multi-level column names
         top_delayed_destinations.columns = [
             'dest', 'avg_delay', 'flight_count', 'airline_name']
 
-        # Filter for destinations with a reasonable number of flights
         top_delayed_destinations = top_delayed_destinations[
             top_delayed_destinations['flight_count'] >= 10]
 
-        # Sort by average delay and get top 5
         top_delayed_destinations = top_delayed_destinations.sort_values(
             'avg_delay', ascending=False).head(5)
 
-        # Get the full airport names for these destinations
-        airports_query = f"""
-        SELECT faa, name 
-        FROM airports 
-        WHERE faa IN ({', '.join([f"'{dest}'" for dest in top_delayed_destinations['dest']])})
-        """
-        destination_airports = run_query(airports_query)
+        if not top_delayed_destinations.empty:
+            airports_query = f"""
+            SELECT faa, name 
+            FROM airports 
+            WHERE faa IN ({', '.join([f"'{dest}'" for dest in top_delayed_destinations['dest']])})
+            """
+            destination_airports = run_query(airports_query)
 
-        # Create a mapping dictionary for airport codes to names
-        airport_names = dict(
-            zip(destination_airports['faa'], destination_airports['name']))
+            airport_names = dict(
+                zip(destination_airports['faa'], destination_airports['name']))
 
-        # Add full airport names to the dataframe
-        top_delayed_destinations['airport_name'] = top_delayed_destinations['dest'].map(
-            lambda code: f"{code} - {airport_names.get(code, 'Unknown Airport')}")
+            top_delayed_destinations['airport_name'] = top_delayed_destinations['dest'].map(
+                lambda code: f"{code} - {airport_names.get(code, 'Unknown Airport')}")
 
-        # Create simplified horizontal bar chart
-        fig_top_delays = go.Figure()
+            fig_top_delays = go.Figure()
 
-        # Sort the data in descending order by avg_delay before plotting
-        # This is not needed as the data is already sorted by 'avg_delay' in descending order
+            fig_top_delays.add_trace(go.Bar(
+                y=top_delayed_destinations['airport_name'],
+                x=top_delayed_destinations['avg_delay'],
+                marker_color=chart_color,
+                orientation='h',
+                text=[
+                    f"{delay:.1f} min" for delay in top_delayed_destinations['avg_delay']],
+                textposition='inside',
+                insidetextanchor='end',
+                textfont=dict(color='white', size=14),
+                width=0.7,
+                name='Average Delay'
+            ))
 
-        # Add simple horizontal bars with consistent colors and clear text labels
-        fig_top_delays.add_trace(go.Bar(
-            # This is already sorted
-            y=top_delayed_destinations['airport_name'],
-            x=top_delayed_destinations['avg_delay'],
-            marker_color='#1E3A8A',  # Single consistent color
-            orientation='h',
-            text=[
-                f"{delay:.1f} min" for delay in top_delayed_destinations['avg_delay']],
-            textposition='inside',
-            insidetextanchor='end',  # Align text to the end of bars
-            textfont=dict(color='white', size=14),
-            width=0.7,
-            name='Average Delay'
-        ))
+            for i, (airport, delay, count) in enumerate(zip(
+                top_delayed_destinations['airport_name'],
+                top_delayed_destinations['avg_delay'],
+                top_delayed_destinations['flight_count']
+            )):
+                fig_top_delays.add_annotation(
+                    x=delay + 1,
+                    y=airport,
+                    text=f"{count} flights",
+                    showarrow=False,
+                    font=dict(size=12),
+                    xanchor='left'
+                )
 
-        # Add flight count as text at the end of each bar
-        for i, (airport, delay, count) in enumerate(zip(
-            top_delayed_destinations['airport_name'],
-            top_delayed_destinations['avg_delay'],
-            top_delayed_destinations['flight_count']
-        )):
-            fig_top_delays.add_annotation(
-                x=delay + 1,  # Position just to the right of bar end
-                y=airport,
-                text=f"{count} flights",
-                showarrow=False,
-                font=dict(size=12),
-                xanchor='left'
+            fig_top_delays.update_layout(
+                height=400,
+                margin=dict(l=20, r=120, t=60, b=40),
+                xaxis_title='Average Delay (minutes)',
+                yaxis_title='',
+                plot_bgcolor='white',
+                yaxis=dict(
+                    showgrid=False,
+                    autorange="reversed"
+                ),
+                xaxis=dict(
+                    zeroline=False,
+                    showgrid=True,
+                    gridcolor='lightgray'
+                ),
+                showlegend=False
             )
 
-        # Clean, simple layout
-        fig_top_delays.update_layout(
-            height=400,
-            margin=dict(l=20, r=120, t=60, b=40),
-            xaxis_title='Average Delay (minutes)',
-            yaxis_title='',  # Remove y-axis title since airport names are self-explanatory
-            plot_bgcolor='white',
-            yaxis=dict(
-                showgrid=False,  # Remove horizontal grid lines
-                # This is the key change - reverse the y-axis to show highest delays at the top
-                autorange="reversed"
-            ),
-            xaxis=dict(
-                zeroline=False,  # Remove zero line
-                showgrid=True,   # Keep vertical grid lines
-                gridcolor='lightgray'
-            ),
-            showlegend=False  # No need for legend with single series
-        )
+            st.plotly_chart(fig_top_delays, use_container_width=True)
+        else:
+            st.warning(
+                f"No destinations with sufficient flights found for {delay_type} analysis.")
 
-        st.plotly_chart(fig_top_delays, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("""
