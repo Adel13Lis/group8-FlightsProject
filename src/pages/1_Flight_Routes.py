@@ -21,6 +21,71 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Queries for weekly and monthly flight trends
+query_weekly_trend = """
+SELECT strftime('%W', date(year || '-' || month || '-' || day)) AS week_number, COUNT(*) AS flight_count
+FROM flights
+WHERE origin = '{origin}' AND dest = '{dest}'
+GROUP BY week_number
+ORDER BY week_number;
+"""
+
+query_monthly_trend = """
+SELECT month, COUNT(*) AS flight_count
+FROM flights
+WHERE origin = '{origin}' AND dest = '{dest}'
+GROUP BY month
+ORDER BY month;
+"""
+
+def plot_weekly_trend(origin, dest):
+    query_weekly_trend = f"""
+    SELECT strftime('%w', date(year || '-' || month || '-' || day)) AS week_number, COUNT(*) AS flight_count
+    FROM flights
+    WHERE origin = '{origin}' AND dest = '{dest}'
+    GROUP BY week_number
+    ORDER BY week_number;
+    """
+    
+    df_weekly = load_data(query_weekly_trend)
+
+    if df_weekly.empty:
+        st.warning("No weekly trend data available for this route.")
+        return
+    
+    df_weekly = df_weekly.dropna(subset=["week_number"])
+    df_weekly["week_number"] = df_weekly["week_number"].astype(int)
+
+    weekday_labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    df_weekly["day_name"] = df_weekly["week_number"].apply(lambda x: weekday_labels[x] if 0 <= x <= 6 else "Unknown")
+
+    df_weekly["day_name"] = pd.Categorical(df_weekly["day_name"], categories=weekday_labels, ordered=True)
+
+    fig = px.line(df_weekly, x="day_name", y="flight_count", markers=True, 
+                  title="Weekly Trend of Flights", labels={"day_name": "Day of the Week", "flight_count": "Number of Flights"})
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_monthly_trend(origin, dest):
+    df_monthly = load_data(query_monthly_trend.format(origin=origin, dest=dest))
+
+    if df_monthly.empty:
+        st.warning("No monthly trend data available for this route.")
+        return
+    
+    df_monthly = df_monthly.dropna(subset=["month"])
+    df_monthly["month"] = df_monthly["month"].astype(int)
+
+    month_labels = ["January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"]
+    df_monthly["month_name"] = df_monthly["month"].apply(lambda x: month_labels[x-1] if 1 <= x <= 12 else "Unknown")
+
+    fig = px.line(df_monthly, x="month_name", y="flight_count", markers=True,
+                  title="Monthly Trend of Flights", labels={"month_name": "Month", "flight_count": "Number of Flights"})
+
+    st.plotly_chart(fig, use_container_width=True)
+
 st.markdown("""
 <style>
     h1, h2, h3 {
@@ -272,3 +337,42 @@ else:
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
+    
+    # Maybe show a histogram of departure delays for this route
+    hist_query = f"""
+    SELECT dep_delay
+    FROM flights
+    WHERE origin = '{origin}' AND dest = '{dest}'
+      AND dep_delay IS NOT NULL
+    """
+    df_hist = load_data(hist_query)
+
+    if not df_hist.empty:
+        chart = (
+            alt.Chart(df_hist)
+            .mark_bar(color="#4682B4")  # Updated to Steel Blue for better contrast
+            .encode(
+                alt.X("dep_delay:Q", bin=alt.Bin(maxbins=30),
+                      title="Departure Delay (min)"),
+                y='count()'
+            )
+            .properties(
+                width=600,
+                height=400,
+                title="Distribution of Departure Delays"
+            )
+        )
+        st.altair_chart(chart, use_container_width=True)
+
+    st.markdown("---")
+    
+col1, col2 = st.columns(2)
+col3, col4 = st.columns(2)
+
+with col1:
+    plot_weekly_trend(origin, dest)
+
+with col2:
+    plot_monthly_trend(origin, dest)
+
+
