@@ -65,3 +65,33 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+st.sidebar.header("Select Route")
+#Query to get unique airport codes from NYC airports only
+airport_query = """
+SELECT DISTINCT faa 
+FROM airports
+WHERE faa IN ('JFK', 'LGA', 'EWR')
+ORDER BY faa
+"""
+df_airports = load_data(airport_query)
+airport_list = df_airports['faa'].tolist()
+
+origin = st.sidebar.selectbox(
+    "Choose Departure Airport (origin)", options=airport_list, index=0)
+
+#Query to get all unique airport codes for destinations
+dest_query = """
+SELECT DISTINCT faa 
+FROM airports
+ORDER BY faa
+"""
+df_dest_airports = load_data(dest_query)
+dest_airport_list = df_dest_airports['faa'].tolist()
+
+dest = st.sidebar.selectbox(
+    "Choose Arrival Airport (destination)", options=dest_airport_list, index=1)
+
+st.write(f"### Selected Route: {origin} \u27A1 {dest}")
+
+st.markdown("---")
