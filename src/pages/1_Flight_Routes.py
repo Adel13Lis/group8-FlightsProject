@@ -94,11 +94,6 @@ def plot_weekly_trend(origin, dest):
 
     st.plotly_chart(fig, use_container_width=True)
 
-
-import pandas as pd
-import plotly.express as px
-
-
 def plot_monthly_trend(origin, dest):
     df_monthly = load_data(query_monthly_trend.format(origin=origin, dest=dest))
 
@@ -137,6 +132,105 @@ def plot_monthly_trend(origin, dest):
         markers=True,
         title="Monthly Trend of Flights",
         labels={"month_name": "Month", "flight_count": "Number of Flights"},
+    )
+
+    fig.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_avg_distance_per_month(origin, dest):
+    query_avg_distance = f"""
+    SELECT month, AVG(distance) AS avg_distance
+    FROM flights
+    WHERE origin = '{origin}' AND dest = '{dest}'
+    GROUP BY month
+    ORDER BY month;
+    """
+
+    df_avg_distance = load_data(query_avg_distance)
+
+    if df_avg_distance.empty:
+        st.warning("No distance data available for this route.")
+        return
+
+    month_labels = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    full_months_df = pd.DataFrame({"month": range(1, 13), "month_name": month_labels})
+
+    df_avg_distance["month"] = df_avg_distance["month"].astype(int)
+    df_avg_distance = full_months_df.merge(
+        df_avg_distance, on="month", how="left"
+    ).fillna({"avg_distance": 0})
+
+    fig = px.line(
+        df_avg_distance,
+        x="month_name",
+        y="avg_distance",
+        markers=True,
+        title="Average Flight Distance Per Month",
+        labels={"month_name": "Month", "avg_distance": "Distance (miles)"},
+    )
+
+    fig.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_delayed_flights_percentage(origin, dest):
+    query_delayed_flights = f"""
+    SELECT month, 
+           ROUND(100.0 * SUM(CASE WHEN dep_delay > 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS delay_percentage
+    FROM flights
+    WHERE origin = '{origin}' AND dest = '{dest}'
+    GROUP BY month
+    ORDER BY month;
+    """
+
+    df_delay_percentage = load_data(query_delayed_flights)
+
+    if df_delay_percentage.empty:
+        st.warning("No delay data available for this route.")
+        return
+
+    month_labels = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    full_months_df = pd.DataFrame({"month": range(1, 13), "month_name": month_labels})
+
+    df_delay_percentage["month"] = df_delay_percentage["month"].astype(int)
+    df_delay_percentage = full_months_df.merge(
+        df_delay_percentage, on="month", how="left"
+    ).fillna({"delay_percentage": 0})
+
+    fig = px.line(
+        df_delay_percentage,
+        x="month_name",
+        y="delay_percentage",
+        markers=True,
+        title="Percentage of Delayed Flights Per Month",
+        labels={"month_name": "Month", "delay_percentage": "Delay Percentage (%)"},
     )
 
     fig.update_xaxes(tickangle=-45)
@@ -496,6 +590,12 @@ with col1:
 
 with col2:
     plot_monthly_trend(origin, dest)
+
+with col3:
+    plot_avg_distance_per_month(origin, dest)
+
+with col4:
+    plot_delayed_flights_percentage(origin, dest)
 
 
 
