@@ -5,7 +5,7 @@ import os
 import plotly.graph_objects as go
 import plotly.express as px
 
-DB_PATH = "/Users/nikolinamicek/Desktop/data_engineering/projectFlights-group8-main-3/flights_database.db"
+DB_PATH =  os.path.join(os.path.dirname(__file__), '..', "flights_database.db")
 
 def load_data(query):
     with sqlite3.connect(DB_PATH) as conn:
