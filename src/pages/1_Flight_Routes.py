@@ -6,8 +6,7 @@ import os
 import plotly.graph_objects as go
 import plotly.express as px
 
-# Set the database path to match the user's folder
-DB_PATH = "/Users/nikolinamicek/Desktop/data_engineering/projectFlights-group8-main-3/flights_database.db"
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', "flights_database.db")
 
 
 def load_data(query):
@@ -234,6 +233,103 @@ def plot_delayed_flights_percentage(origin, dest):
     )
 
     fig.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_top_airlines(origin, dest):
+    query_top_airlines = f"""
+    SELECT carrier, COUNT(*) AS flight_count
+    FROM flights
+    WHERE origin = '{origin}' AND dest = '{dest}'
+    GROUP BY carrier
+    ORDER BY flight_count DESC
+    LIMIT 3;
+    """
+    
+    df_top_airlines = load_data(query_top_airlines)
+
+    if df_top_airlines.empty:
+        st.warning("No airline data available for this route.")
+        return
+
+    airline_names = {
+        "UA": "United Airlines",
+        "DL": "Delta Air Lines",
+        "B6": "JetBlue Airways",
+        "AA": "American Airlines",
+        "NK": "Spirit Airlines",
+        "WN": "Southwest Airlines",
+        "AS": "Alaska Airlines",
+        "YX": "Republic Airways (Regional)",
+        "9E": "Endeavor Air (Delta Connection)",
+        "HA": "Hawaiian Airlines",
+        "G4": "Allegiant Air",
+        "MQ": "Envoy Air (American Eagle)",
+        "OO": "SkyWest Airlines",
+        "F9": "Frontier Airlines"
+    }
+
+    df_top_airlines["airline_name"] = df_top_airlines["carrier"].map(airline_names).fillna(df_top_airlines["carrier"])
+
+    fig = px.bar(
+        df_top_airlines,
+        x="flight_count",
+        y="airline_name",
+        orientation="h",
+        title="Top 3 Airlines on This Route",
+        labels={"flight_count": "Number of Flights", "airline_name": "Airline"},
+        color="flight_count",
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_top_delayed_airlines(origin, dest):
+    query_top_delayed_airlines = f"""
+    SELECT carrier, 
+           COUNT(*) AS delayed_flights, 
+           ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM flights WHERE origin = '{origin}' AND dest = '{dest}'), 2) AS delay_percentage
+    FROM flights
+    WHERE origin = '{origin}' AND dest = '{dest}'
+    AND dep_delay > 0  -- Only count delayed flights
+    GROUP BY carrier
+    ORDER BY delayed_flights DESC
+    LIMIT 3;
+    """
+    
+    df_top_delayed_airlines = load_data(query_top_delayed_airlines)
+
+    if df_top_delayed_airlines.empty:
+        st.warning("No delay data available for this route.")
+        return
+
+    airline_names = {
+        "UA": "United Airlines",
+        "DL": "Delta Air Lines",
+        "B6": "JetBlue Airways",
+        "AA": "American Airlines",
+        "NK": "Spirit Airlines",
+        "WN": "Southwest Airlines",
+        "AS": "Alaska Airlines",
+        "YX": "Republic Airways (Regional)",
+        "9E": "Endeavor Air (Delta Connection)",
+        "HA": "Hawaiian Airlines",
+        "G4": "Allegiant Air",
+        "MQ": "Envoy Air (American Eagle)",
+        "OO": "SkyWest Airlines",
+        "F9": "Frontier Airlines"
+    }
+
+    df_top_delayed_airlines["airline_name"] = df_top_delayed_airlines["carrier"].map(airline_names).fillna(df_top_delayed_airlines["carrier"])
+
+    fig = px.bar(
+        df_top_delayed_airlines,
+        x="delay_percentage",
+        y="airline_name",
+        orientation="h",
+        title="Top 3 Airlines with Most Delayed Flights",
+        labels={"delay_percentage": "Delay Percentage (%)", "airline_name": "Airline"},
+        color="delay_percentage",
+    )
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -596,6 +692,14 @@ with col3:
 
 with col4:
     plot_delayed_flights_percentage(origin, dest)
+
+col5, col6 = st.columns(2)
+
+with col5:
+    plot_top_airlines(origin, dest)
+
+with col6:
+    plot_top_delayed_airlines(origin, dest)
 
 
 
