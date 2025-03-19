@@ -1,11 +1,12 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import altair as alt
 import os
 import plotly.graph_objects as go
 import plotly.express as px
 
-DB_PATH =  os.path.join(os.path.dirname(__file__), '..', "flights_database.db")
+DB_PATH =  os.path.join(os.path.dirname(__file__), '..', '..', "flights_database.db")
 
 def load_data(query):
     with sqlite3.connect(DB_PATH) as conn:
