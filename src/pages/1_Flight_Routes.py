@@ -137,54 +137,46 @@ def plot_monthly_trend(origin, dest):
 
     st.plotly_chart(fig, use_container_width=True)
 
-def plot_avg_distance_per_month(origin, dest):
-    query_avg_distance = f"""
-    SELECT month, AVG(distance) AS avg_distance
-    FROM flights
-    WHERE origin = '{origin}' AND dest = '{dest}'
-    GROUP BY month
-    ORDER BY month;
+def plot_flight_capacity_per_month(origin, dest):
+    query_flight_capacity = f"""
+    SELECT 
+        f.month,
+        SUM(p.seats) AS total_capacity
+    FROM flights f
+    JOIN planes p ON f.tailnum = p.tailnum
+    WHERE f.origin = '{origin}' AND f.dest = '{dest}'
+    GROUP BY f.month
+    ORDER BY f.month;
     """
 
-    df_avg_distance = load_data(query_avg_distance)
+    df_capacity = load_data(query_flight_capacity)
 
-    if df_avg_distance.empty:
-        st.warning("No distance data available for this route.")
+    if df_capacity.empty:
+        st.warning("No capacity data available for this route.")
         return
 
     month_labels = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
     ]
     full_months_df = pd.DataFrame({"month": range(1, 13), "month_name": month_labels})
 
-    df_avg_distance["month"] = df_avg_distance["month"].astype(int)
-    df_avg_distance = full_months_df.merge(
-        df_avg_distance, on="month", how="left"
-    ).fillna({"avg_distance": 0})
+    df_capacity["month"] = df_capacity["month"].astype(int)
+    df_capacity = full_months_df.merge(df_capacity, on="month", how="left").fillna({"total_capacity": 0})
 
     fig = px.line(
-        df_avg_distance,
+        df_capacity,
         x="month_name",
-        y="avg_distance",
+        y="total_capacity",
         markers=True,
-        title="Average Flight Distance Per Month",
-        labels={"month_name": "Month", "avg_distance": "Distance (miles)"},
+        title="Total Seating Capacity on This Route (Per Month)",
+        labels={"month_name": "Month", "total_capacity": "Seats Available"},
     )
 
     fig.update_xaxes(tickangle=-45)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 def plot_delayed_flights_percentage(origin, dest):
     query_delayed_flights = f"""
@@ -688,7 +680,7 @@ with col2:
     plot_monthly_trend(origin, dest)
 
 with col3:
-    plot_avg_distance_per_month(origin, dest)
+    plot_flight_capacity_per_month(origin, dest)
 
 with col4:
     plot_delayed_flights_percentage(origin, dest)
