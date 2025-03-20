@@ -20,7 +20,7 @@ st.markdown(
 <div style="display: flex; align-items: center; margin-bottom: 1rem;">
     <div style="flex: 5;">
         <h1>Flight Routes Page 🛩</h1>
-        <p>Welcome to the <strong>Flight Routes</strong> section. Here, you can explore different flight routes from New York City's major airports to destinations worldwide.</p>
+        <p>Welcome to the <strong>Flight Routes</strong> section. Explore analysis of specific flight routes from New York City's airports to chosen destination.</p>
     </div>
 </div>
 """,
@@ -169,7 +169,7 @@ def plot_flight_capacity_per_month(origin, dest):
         x="month_name",
         y="total_capacity",
         markers=True,
-        title="Total Seating Capacity on This Route (Per Month)",
+        title="Total Seating Capacity ",
         labels={"month_name": "Month", "total_capacity": "Seats Available"},
     )
 
@@ -220,7 +220,7 @@ def plot_delayed_flights_percentage(origin, dest):
         x="month_name",
         y="delay_percentage",
         markers=True,
-        title="Percentage of Delayed Flights Per Month",
+        title="Percentage of Delayed Flights",
         labels={"month_name": "Month", "delay_percentage": "Delay Percentage (%)"},
     )
 
@@ -235,7 +235,7 @@ def plot_top_airlines(origin, dest):
     WHERE origin = '{origin}' AND dest = '{dest}'
     GROUP BY carrier
     ORDER BY flight_count DESC
-    LIMIT 3;
+    LIMIT 5;
     """
     
     df_top_airlines = load_data(query_top_airlines)
@@ -268,7 +268,7 @@ def plot_top_airlines(origin, dest):
         x="flight_count",
         y="airline_name",
         orientation="h",
-        title="Top 3 Airlines on This Route",
+        title="Top Airline Carriers",
         labels={"flight_count": "Number of Flights", "airline_name": "Airline"},
         color="flight_count",
     )
@@ -285,7 +285,7 @@ def plot_top_delayed_airlines(origin, dest):
     AND dep_delay > 0  -- Only count delayed flights
     GROUP BY carrier
     ORDER BY delayed_flights DESC
-    LIMIT 3;
+    LIMIT 5;
     """
     
     df_top_delayed_airlines = load_data(query_top_delayed_airlines)
@@ -318,7 +318,7 @@ def plot_top_delayed_airlines(origin, dest):
         x="delay_percentage",
         y="airline_name",
         orientation="h",
-        title="Top 3 Airlines with Most Delayed Flights",
+        title="Top Airline Carriers with most delayed flights",
         labels={"delay_percentage": "Delay Percentage (%)", "airline_name": "Airline"},
         color="delay_percentage",
     )
@@ -375,7 +375,7 @@ st.markdown(
 
 
 st.sidebar.header("Select Route")
-# Query to get unique airport codes from NYC airports only
+
 airport_query = """
 SELECT DISTINCT faa 
 FROM airports
@@ -389,7 +389,6 @@ origin = st.sidebar.selectbox(
     "Choose Departure Airport (origin)", options=airport_list, index=0
 )
 
-# Query to get all unique airport codes for destinations
 dest_query = """
 SELECT DISTINCT faa 
 FROM airports
@@ -404,10 +403,8 @@ dest = st.sidebar.selectbox(
 
 st.write(f"### Selected Route: {origin} \u27a1 {dest}")
 
-# Another horizontal line separator before statistics
 st.markdown("---")
 
-# Query flight statistics for this route
 route_query = f"""
 SELECT 
     COUNT(*) as flight_count,
@@ -462,7 +459,6 @@ else:
         st.markdown("<div>", unsafe_allow_html=True)
         st.subheader("Flight Route Map")
 
-        # Query to fetch airport coordinates from the database
         route_query = f"""
         SELECT a1.lat AS origin_lat, a1.lon AS origin_lon, 
                a2.lat AS dest_lat, a2.lon AS dest_lon, 
@@ -640,7 +636,6 @@ else:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Another separator before histogram
     st.markdown("---")
 
     # Maybe show a histogram of departure delays for this route
@@ -655,7 +650,7 @@ else:
     if not df_hist.empty:
         chart = (
             alt.Chart(df_hist)
-            .mark_bar(color="#4682B4")  # Updated to Steel Blue for better contrast
+            .mark_bar(color="#4682B4")
             .encode(
                 alt.X(
                     "dep_delay:Q",
