@@ -448,18 +448,18 @@ else:
         </div>
         
         <div class="metric-card">
-            <div class="metric-label">Avg. Departure Delay (min)</div>
-            <div class="metric-value">{avg_dep_delay}</div>
+            <div class="metric-label">Avg. Departure Delay</div>
+            <div class="metric-value">{avg_dep_delay} min</div>
         </div>
         
         <div class="metric-card">
-            <div class="metric-label">Avg. Arrival Delay (min)</div>
-            <div class="metric-value">{avg_arr_delay}</div>
+            <div class="metric-label">Avg. Arrival Delay</div>
+            <div class="metric-value">{avg_arr_delay} min</div>
         </div>
         
         <div class="metric-card">
-            <div class="metric-label">Avg. Distance (miles)</div>
-            <div class="metric-value">{avg_distance}</div>
+            <div class="metric-label">Avg. Distance</div>
+            <div class="metric-value">{avg_distance} miles</div>
         </div>
         """,
             unsafe_allow_html=True,
