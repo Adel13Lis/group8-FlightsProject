@@ -377,29 +377,39 @@ st.markdown(
 st.sidebar.header("Select Route")
 
 airport_query = """
-SELECT DISTINCT faa 
+SELECT faa, name
 FROM airports
 WHERE faa IN ('JFK', 'LGA', 'EWR')
-ORDER BY faa
+ORDER BY faa;
 """
 df_airports = load_data(airport_query)
-airport_list = df_airports["faa"].tolist()
 
-origin = st.sidebar.selectbox(
-    "Choose Departure Airport (origin)", options=airport_list, index=0
+airport_list = df_airports.apply(
+    lambda row: f"{row['faa']} - {row['name']}", axis=1
+).tolist()
+faa_mapping = dict(zip(airport_list, df_airports["faa"]))
+
+origin_selection = st.sidebar.selectbox(
+    "Choose Departure Airport (Origin)", options=airport_list, index=0
 )
+origin = faa_mapping[origin_selection]
 
 dest_query = """
-SELECT DISTINCT faa 
+SELECT faa, name
 FROM airports
-ORDER BY faa
+ORDER BY faa;
 """
 df_dest_airports = load_data(dest_query)
-dest_airport_list = df_dest_airports["faa"].tolist()
 
-dest = st.sidebar.selectbox(
-    "Choose Arrival Airport (destination)", options=dest_airport_list, index=1
+dest_airport_list = df_dest_airports.apply(
+    lambda row: f"{row['faa']} - {row['name']}", axis=1
+).tolist()
+dest_faa_mapping = dict(zip(dest_airport_list, df_dest_airports["faa"]))
+
+dest_selection = st.sidebar.selectbox(
+    "Choose Arrival Airport (Destination)", options=dest_airport_list, index=1
 )
+dest = dest_faa_mapping[dest_selection]
 
 st.write(f"### Selected Route: {origin} \u27a1 {dest}")
 
