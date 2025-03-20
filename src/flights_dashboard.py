@@ -439,7 +439,7 @@ with col1:
                 "Select the origin airport", nyc_airports, index=0)
             df_delay = load_data(query_delay_distribution(airport))
 
-    colors = ['#1B5E20', '#2E7D32', '#388E3C', '#43A047', '#66BB6A']
+    colors = ["#0D47A1", "#1565C0", "#1976D2", "#1E88E5", "#42A5F5"]
 
     fig_delay = px.bar(
         df_delay,
@@ -503,7 +503,7 @@ with col2:
     else:
         data_col = 'destinations_count'
 
-    colors = ['#004D40', '#00796B', '#009688']
+    colors = ["#1565C0", "#1E88E5", "#42A5F5"]
 
     fig_airports = px.pie(
         df_airports,
@@ -555,18 +555,18 @@ LIMIT 10
 """
 df_destinations = load_data(query_top_destinations)
 
-green_palette = [
-    "#f7fcf5",
-    "#e5f5e0",
-    "#d6efd0",
-    "#c7e9c0",
-    "#a1d99b",
-    "#74c476",
-    "#5ab769",
-    "#41ab5d",
-    "#238b45",
-    "#006d2c",
-    "#00441b"
+blue_palette = [
+    "#f7fbff",
+    "#e5f2ff",
+    "#d0e6ff",
+    "#b6d9ff",
+    "#8fc4ff",
+    "#6baed6",
+    "#4a98c9",
+    "#3182bd",
+    "#1c6ca8",
+    "#08519c",
+    "#08306b"
 ]
 
 fig_destinations = px.bar(
@@ -574,7 +574,7 @@ fig_destinations = px.bar(
     y='dest',
     x='flight_count',
     color='flight_count',
-    color_continuous_scale=green_palette,
+    color_continuous_scale=blue_palette,
     labels={'flight_count': 'Number of Flights',
             'dest': 'Destination Airport'},
     height=500,
@@ -644,20 +644,14 @@ ORDER BY
     END
 """
 df_time = load_data(query_time_of_day)
-green_colors = [
-    "#a1d99b",
-    "#74c476",
-    "#5ab769",
-    "#41ab5d",
-    "#238b45",
-]
+blue_colors = ["#8fc4ff", "#6baed6", "#4a98c9", "#3182bd", "#1c6ca8"]
 
 fig_time = px.bar(
     df_time,
     x='time_of_day',
     y='delay_percentage',
     color='delay_percentage',
-    color_continuous_scale=green_colors,
+    color_continuous_scale=blue_colors,
     text=df_time['delay_percentage'].apply(lambda x: f"{x}%"),
     labels={
         'time_of_day': 'Time of Day',
