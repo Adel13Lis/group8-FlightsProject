@@ -57,7 +57,6 @@ Since macOS restricts global pip installation, the best solution is to create a 
 python3 -m venv myenv
 source myenv/bin/activate  # open virtual environment on macOS/Linux
 myenv\Scripts\activate     # virtual environment on Windows
-^C #close the virtual environment
 ```
 
 ### Download libary
