@@ -48,7 +48,7 @@ This project, developed by the **XB_0112 Data Engineering** group 8, provides an
 ## Installation & Setup
 ### Clone the repository
 ```bash
-git clone https://github.com/Adel13Lis/projectFlights-group8.git
+git clone https://github.com/Adel13Lis/group8-FlightsProject.git
 ```
 
 ### [optional] Create a virtual environment and activate it
