@@ -498,10 +498,13 @@ with col2:
 
     if flights_or_seats == 'Total Flights':
         data_col = 'flights_count'
+        data_title = 'Flights'
     elif flights_or_seats == 'Total Seats':
         data_col = 'seats_sum'
+        data_title = 'Seats'
     else:
         data_col = 'destinations_count'
+        data_title = 'Destinations'
 
     colors = ["#1565C0", "#1E88E5", "#42A5F5"]
 
@@ -523,7 +526,7 @@ with col2:
 
     fig_airports.update_layout(
         annotations=[dict(
-            text=f"{df_airports[data_col].sum():,}<br>Flights",
+            text=f"{df_airports[data_col].sum():,}<br>{data_title}",
             x=0.5, y=0.5,
             font_size=18,
             showarrow=False
