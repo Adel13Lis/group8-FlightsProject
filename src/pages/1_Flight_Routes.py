@@ -6,7 +6,8 @@ import os
 import plotly.graph_objects as go
 import plotly.express as px
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', "flights_database.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), '..',
+                       '..', "flights_database.db")
 
 
 def load_data(query):
@@ -86,15 +87,18 @@ def plot_weekly_trend(origin, dest):
         y="flight_count",
         markers=True,
         title="Weekly Trend of Flights",
-        labels={"day_name": "Day of the Week", "flight_count": "Number of Flights"},
+        labels={"day_name": "Day of the Week",
+                "flight_count": "Number of Flights"},
     )
 
     fig.update_xaxes(tickangle=-45)
 
     st.plotly_chart(fig, use_container_width=True)
 
+
 def plot_monthly_trend(origin, dest):
-    df_monthly = load_data(query_monthly_trend.format(origin=origin, dest=dest))
+    df_monthly = load_data(
+        query_monthly_trend.format(origin=origin, dest=dest))
 
     if df_monthly.empty:
         st.warning("No monthly trend data available for this route.")
@@ -118,7 +122,8 @@ def plot_monthly_trend(origin, dest):
         "November",
         "December",
     ]
-    full_months_df = pd.DataFrame({"month": range(1, 13), "month_name": month_labels})
+    full_months_df = pd.DataFrame(
+        {"month": range(1, 13), "month_name": month_labels})
 
     df_monthly = full_months_df.merge(df_monthly, on="month", how="left").fillna(
         {"flight_count": 0}
@@ -136,6 +141,7 @@ def plot_monthly_trend(origin, dest):
     fig.update_xaxes(tickangle=-45)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 def plot_flight_capacity_per_month(origin, dest):
     query_flight_capacity = f"""
@@ -156,13 +162,15 @@ def plot_flight_capacity_per_month(origin, dest):
         return
 
     month_labels = [
-        "January", "February", "March", "April", "May", "June", 
+        "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ]
-    full_months_df = pd.DataFrame({"month": range(1, 13), "month_name": month_labels})
+    full_months_df = pd.DataFrame(
+        {"month": range(1, 13), "month_name": month_labels})
 
     df_capacity["month"] = df_capacity["month"].astype(int)
-    df_capacity = full_months_df.merge(df_capacity, on="month", how="left").fillna({"total_capacity": 0})
+    df_capacity = full_months_df.merge(
+        df_capacity, on="month", how="left").fillna({"total_capacity": 0})
 
     fig = px.line(
         df_capacity,
@@ -208,7 +216,8 @@ def plot_delayed_flights_percentage(origin, dest):
         "November",
         "December",
     ]
-    full_months_df = pd.DataFrame({"month": range(1, 13), "month_name": month_labels})
+    full_months_df = pd.DataFrame(
+        {"month": range(1, 13), "month_name": month_labels})
 
     df_delay_percentage["month"] = df_delay_percentage["month"].astype(int)
     df_delay_percentage = full_months_df.merge(
@@ -221,12 +230,14 @@ def plot_delayed_flights_percentage(origin, dest):
         y="delay_percentage",
         markers=True,
         title="Percentage of Delayed Flights",
-        labels={"month_name": "Month", "delay_percentage": "Delay Percentage (%)"},
+        labels={"month_name": "Month",
+                "delay_percentage": "Delay Percentage (%)"},
     )
 
     fig.update_xaxes(tickangle=-45)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 def plot_top_airlines(origin, dest):
     query_top_airlines = f"""
@@ -237,7 +248,7 @@ def plot_top_airlines(origin, dest):
     ORDER BY flight_count DESC
     LIMIT 5;
     """
-    
+
     df_top_airlines = load_data(query_top_airlines)
 
     if df_top_airlines.empty:
@@ -261,7 +272,8 @@ def plot_top_airlines(origin, dest):
         "F9": "Frontier Airlines"
     }
 
-    df_top_airlines["airline_name"] = df_top_airlines["carrier"].map(airline_names).fillna(df_top_airlines["carrier"])
+    df_top_airlines["airline_name"] = df_top_airlines["carrier"].map(
+        airline_names).fillna(df_top_airlines["carrier"])
 
     fig = px.bar(
         df_top_airlines,
@@ -269,11 +281,15 @@ def plot_top_airlines(origin, dest):
         y="airline_name",
         orientation="h",
         title="Top Airline Carriers",
-        labels={"flight_count": "Number of Flights", "airline_name": "Airline"},
+        labels={"flight_count": "Number of Flights",
+                "airline_name": "Airline"},
         color="flight_count",
     )
 
+    fig.update_layout(yaxis=dict(autorange='reversed'))
+
     st.plotly_chart(fig, use_container_width=True)
+
 
 def plot_top_delayed_airlines(origin, dest):
     query_top_delayed_airlines = f"""
@@ -287,7 +303,7 @@ def plot_top_delayed_airlines(origin, dest):
     ORDER BY delayed_flights DESC
     LIMIT 5;
     """
-    
+
     df_top_delayed_airlines = load_data(query_top_delayed_airlines)
 
     if df_top_delayed_airlines.empty:
@@ -311,7 +327,8 @@ def plot_top_delayed_airlines(origin, dest):
         "F9": "Frontier Airlines"
     }
 
-    df_top_delayed_airlines["airline_name"] = df_top_delayed_airlines["carrier"].map(airline_names).fillna(df_top_delayed_airlines["carrier"])
+    df_top_delayed_airlines["airline_name"] = df_top_delayed_airlines["carrier"].map(
+        airline_names).fillna(df_top_delayed_airlines["carrier"])
 
     fig = px.bar(
         df_top_delayed_airlines,
@@ -319,9 +336,12 @@ def plot_top_delayed_airlines(origin, dest):
         y="airline_name",
         orientation="h",
         title="Top Airline Carriers with most delayed flights",
-        labels={"delay_percentage": "Delay Percentage (%)", "airline_name": "Airline"},
+        labels={
+            "delay_percentage": "Delay Percentage (%)", "airline_name": "Airline"},
         color="delay_percentage",
     )
+
+    fig.update_layout(yaxis=dict(autorange='reversed'))
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -488,7 +508,8 @@ else:
             fig_map = go.Figure()
 
             if dest_tzone and (
-                dest_tzone.startswith("Europe/") or dest_tzone.startswith("Pacific/")
+                dest_tzone.startswith(
+                    "Europe/") or dest_tzone.startswith("Pacific/")
             ):
                 map_scope = "world"
             else:
@@ -577,7 +598,8 @@ else:
                     lon=[origin_lon, dest_lon],
                     lat=[origin_lat, dest_lat],
                     mode="markers",
-                    marker=dict(size=10, color=["#6A0DAD", "#6A0DAD"], symbol="circle"),
+                    marker=dict(size=10, color=[
+                                "#6A0DAD", "#6A0DAD"], symbol="circle"),
                     text=[origin, dest],
                     hoverinfo="text",
                     name="Airports",
@@ -697,6 +719,3 @@ with col5:
 
 with col6:
     plot_top_delayed_airlines(origin, dest)
-
-
-

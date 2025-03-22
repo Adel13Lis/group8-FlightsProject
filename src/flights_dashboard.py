@@ -610,7 +610,8 @@ fig_destinations.update_layout(
     yaxis_title='',
     coloraxis_showscale=False,
     template='plotly_white',
-    margin=dict(l=200, r=40, t=40, b=40)
+    margin=dict(l=200, r=40, t=40, b=40),
+    yaxis=dict(autorange='reversed')
 )
 
 st.markdown('<div class="chart-container">', unsafe_allow_html=True)
