@@ -188,9 +188,15 @@ if analysis_mode == "Airport Analysis":
             delay_rate = (delayed_flights / total_flights) * \
                 100 if total_flights > 0 else 0
 
+            is_avg_dep_delay = avg_dep_delay > 0
+            is_avg_arr_delay = avg_arr_delay > 0
+
+            message_dep = "Average Departure Delay" if avg_dep_delay > 0 else "Average Early Departure"
+            message_arr = "Average Arrival Delay" if avg_arr_delay > 0 else "Average Early Arrival"
+
             st.metric("Total Flights", f"{total_flights}")
-            st.metric("Average Departure Delay", f"{avg_dep_delay:.1f} min")
-            st.metric("Average Arrival Delay", f"{avg_arr_delay:.1f} min")
+            st.metric(f"{message_dep}", f"{abs(avg_dep_delay):.1f} min")
+            st.metric(f"{message_arr}", f"{abs(avg_arr_delay):.1f} min")
             st.metric("Delayed Flights (>15min)", f"{delay_rate:.1f}%")
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -430,9 +436,12 @@ elif analysis_mode == "Specific Route Analysis":
             delay_rate = (delayed_flights / total_flights) * \
                 100 if total_flights > 0 else 0
 
+            message_dep = "Average Departure Delay" if avg_dep_delay > 0 else "Average Early Departure"
+            message_arr = "Average Arrival Delay" if avg_arr_delay > 0 else "Average Early Arrival"
+
             st.metric("Total Flights", f"{total_flights}")
-            st.metric("Average Departure Delay", f"{avg_dep_delay:.1f} min")
-            st.metric("Average Arrival Delay", f"{avg_arr_delay:.1f} min")
+            st.metric(f"{message_dep}", f"{abs(avg_dep_delay):.1f} min")
+            st.metric(f"{message_arr}", f"{abs(avg_arr_delay):.1f} min")
             st.metric("Delayed Flights (>15min)", f"{delay_rate:.1f}%")
             st.markdown("</div>", unsafe_allow_html=True)
 
