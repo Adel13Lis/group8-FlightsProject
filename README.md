@@ -71,11 +71,11 @@ If you use Jupyter Notebook or Google Colab
 ### Run
 The analysis contained in the report
 ```bash
-python3 flights.py
+python3 src/flights.py
 ```
 **Run the dashboard on your own machine**
 ```bash
-streamlit run flights_dashboard.py
+streamlit run src/flights_dashboard.py
 ```
 
 ### Project Structure
