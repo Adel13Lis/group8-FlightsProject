@@ -670,7 +670,6 @@ else:
 
     st.markdown("---")
 
-    # Maybe show a histogram of departure delays for this route
     hist_query = f"""
     SELECT dep_delay
     FROM flights
