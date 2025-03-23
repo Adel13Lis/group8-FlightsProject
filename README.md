@@ -1,6 +1,9 @@
 
 ## Flights Analysis Dashboard✈️
 This project, developed by the **XB_0112 Data Engineering** group 8, provides an interactive dashboard built with Python and Streamlit to visualize airport and flight data—with features including **multi-language support, multi-page switching, real-time map visualization and flight path simulation using world city coordinates from worldcities.csv, dynamic data statistics, real-time data entry and query capabilities, and interactive sidebar controls.**
+
+You can access the dashboard at this [link](https://group8-flightsproject-vu.streamlit.app/).
+
 ### Project Report && Project Inrtoduction
 [Project Report](project%20report.md) && [flights_part1-4.pdf](flights_part1-4.pdf) 
 
