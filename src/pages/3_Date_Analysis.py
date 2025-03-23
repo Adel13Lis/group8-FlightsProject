@@ -10,6 +10,65 @@ def load_data(query):
         df = pd.read_sql_query(query, conn)
     return df
 
+st.markdown(
+    """
+<div style="display: flex; align-items: center; margin-bottom: 1rem;">
+    <div style="flex: 5;">
+        <h1>Date-based Analysis </h1>
+        <p>Welcome to the <strong>Date Analysis</strong> section. Explore flights analysis of a specific date for New York City's airports. </p>
+    </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+<style>
+    h1, h2, h3 {
+        color: #0e4d92;
+    }
+    .main {
+        background-color: #f8f9fa;
+    }
+    .metric-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
+    }
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #333;
+    }
+    .metric-label {
+        font-size: 1.1rem;
+        color: #555;
+        margin-bottom: 5px;
+    }
+    .chart-container {
+        background-color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    .airport-subtitle {
+        color: #808080;
+        font-size: 0.8rem;
+        margin-top: -10px;
+        padding-bottom: 10px;
+    }
+    .stPlotlyChart {
+        margin-bottom: 20px;
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 
 st.title("Date-based Analysis \U0001F4C5")
 
