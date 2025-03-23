@@ -10,6 +10,7 @@ def load_data(query):
         df = pd.read_sql_query(query, conn)
     return df
 
+
 st.markdown(
     """
 <div style="display: flex; align-items: center; margin-bottom: 1rem;">
@@ -70,42 +71,102 @@ st.markdown(
 )
 
 
-st.title("Date-based Analysis \U0001F4C5")
+def most_delayed_airlines(year, month, day):
+    query = f"""
+    SELECT f.carrier, a.name AS airline_name, AVG(f.arr_delay) as avg_arr_delay
+    FROM flights f
+    JOIN airlines a ON f.carrier = a.carrier
+    WHERE f.year = {year}
+      AND f.month = {month}
+      AND f.day = {day}
+      AND f.origin IN ('JFK','LGA','EWR')
+    GROUP BY f.carrier
+    ORDER BY avg_arr_delay DESC
+    LIMIT 10;
+    """
+    df = load_data(query)
+    if not df.empty:
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("avg_arr_delay:Q", title="Avg. Arrival Delay (min)"),
+                y=alt.Y("airline_name:N", sort="-x", title="Airline"),
+                tooltip=["airline_name", "avg_arr_delay"],
+            )
+            .properties(width=350, height=400, title="Most Delayed Airlines")
+        )
+        return chart
+    return None
+
+
+def top_destinations(year, month, day):
+    query = f"""
+    SELECT f.dest, a.name AS airport_name, COUNT(*) as flight_count
+    FROM flights f
+    JOIN airports a ON f.dest = a.faa
+    WHERE f.year = {year}
+      AND f.month = {month}
+      AND f.day = {day}
+      AND f.origin IN ('JFK','LGA','EWR')
+    GROUP BY f.dest
+    ORDER BY flight_count DESC
+    LIMIT 10;
+    """
+    df = load_data(query)
+    if not df.empty:
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(
+                x=alt.X("flight_count:Q", title="Number of Flights"),
+                y=alt.Y("dest:N", sort="-x", title="Destination"),
+                tooltip=["dest", "airport_name", "flight_count"],
+            )
+            .properties(width=350, height=400, title="Top 10 Destinations")
+        )
+        return chart
+    return None
+
 
 st.markdown("Pick a date to see relevant flight statistics from NYC airports.")
 
-# A date input widget
-selected_date = st.date_input("Select Date", value=datetime(2023, 1, 1),
-                              min_value=datetime(2023, 1, 1),
-                              max_value=datetime(2023, 12, 31))
+selected_date = st.date_input(
+    "Select Date",
+    value=datetime(2023, 1, 1),
+    min_value=datetime(2023, 1, 1),
+    max_value=datetime(2023, 12, 31),
+)
 
 if selected_date:
-    year_ = selected_date.year
-    month_ = selected_date.month
-    day_ = selected_date.day
+    year = selected_date.year
+    month = selected_date.month
+    day = selected_date.day
 
     st.write(f"**Selected date**: {selected_date.strftime('%Y-%m-%d')}")
 
-    # Query flights for that specific date
     date_query = f"""
     SELECT 
         COUNT(*) as flight_count,
         AVG(dep_delay) as avg_dep_delay,
         AVG(arr_delay) as avg_arr_delay
     FROM flights
-    WHERE year = {year_}
-      AND month = {month_}
-      AND day = {day_}
+    WHERE year = {year}
+      AND month = {month}
+      AND day = {day}
       AND origin IN ('JFK','LGA','EWR');
     """
     df_date_stats = load_data(date_query)
 
-    flight_count = int(
-        df_date_stats['flight_count'][0]) if not df_date_stats.empty else 0
-    avg_dep_delay = round(
-        df_date_stats['avg_dep_delay'][0], 2) if not df_date_stats.empty else None
-    avg_arr_delay = round(
-        df_date_stats['avg_arr_delay'][0], 2) if not df_date_stats.empty else None
+    flight_count = (
+        int(df_date_stats["flight_count"][0]) if not df_date_stats.empty else 0
+    )
+    avg_dep_delay = (
+        round(df_date_stats["avg_dep_delay"][0], 2) if not df_date_stats.empty else None
+    )
+    avg_arr_delay = (
+        round(df_date_stats["avg_arr_delay"][0], 2) if not df_date_stats.empty else None
+    )
 
     if flight_count > 0:
         col1, col2, col3 = st.columns(3)
@@ -142,14 +203,13 @@ if selected_date:
                 unsafe_allow_html=True,
             )
 
-        # Example: breakdown by airline for that date
         airline_query = f"""
         SELECT f.carrier, a.name AS airline_name, COUNT(*) as flight_count
         FROM flights f
         JOIN airlines a ON f.carrier = a.carrier
-        WHERE f.year = {year_}
-          AND f.month = {month_}
-          AND f.day = {day_}
+        WHERE f.year = {year}
+          AND f.month = {month}
+          AND f.day = {day}
           AND f.origin IN ('JFK','LGA','EWR')
         GROUP BY f.carrier
         ORDER BY flight_count DESC;
@@ -163,17 +223,26 @@ if selected_date:
                 .encode(
                     x=alt.X("flight_count:Q", title="Number of Flights"),
                     y=alt.Y("airline_name:N", sort="-x", title="Airline"),
-                    tooltip=["airline_name", "flight_count"]
+                    tooltip=["airline_name", "flight_count"],
                 )
                 .properties(
-                    width=700,
-                    height=400,
-                    title="Flights by Airline on Selected Date"
+                    width=700, height=400, title="Flights by Airline on Selected Date"
                 )
             )
             st.altair_chart(date_bar, use_container_width=True)
         else:
             st.info("No flights found by airline for this date.")
 
+        col4, col5 = st.columns(2)
+        delayed_chart = most_delayed_airlines(year, month, day)
+        top_dest_chart = top_destinations(year, month, day)
+
+        if delayed_chart:
+            col4.altair_chart(delayed_chart, use_container_width=True)
+        if top_dest_chart:
+            col5.altair_chart(top_dest_chart, use_container_width=True)
+
     else:
         st.warning("No flights found on this date.")
+
+
