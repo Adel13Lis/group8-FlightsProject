@@ -4,6 +4,8 @@ import pandas as pd
 import altair as alt
 from datetime import datetime
 
+DB_PATH = os.path.join(os.path.dirname(__file__), '..',
+                       '..', "flights_database.db")
 
 def load_data(query):
     with sqlite3.connect("flights_database.db") as conn:
