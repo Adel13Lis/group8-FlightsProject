@@ -109,9 +109,38 @@ if selected_date:
 
     if flight_count > 0:
         col1, col2, col3 = st.columns(3)
-        col1.metric("Number of Flights", flight_count)
-        col2.metric("Avg. Departure Delay (min)", avg_dep_delay)
-        col3.metric("Avg. Arrival Delay (min)", avg_arr_delay)
+        with col1:
+            st.markdown(
+                f"""
+                <div class="metric-card">
+                    <div class="metric-label">Number of Flights</div>
+                    <div class="metric-value">{flight_count}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with col2:
+            st.markdown(
+                f"""
+                <div class="metric-card">
+                    <div class="metric-label">Avg. Departure Delay </div>
+                    <div class="metric-value">{avg_dep_delay} min</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with col3:
+            st.markdown(
+                f"""
+                <div class="metric-card">
+                    <div class="metric-label">Avg. Arrival Delay </div>
+                    <div class="metric-value">{avg_arr_delay} min</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         # Example: breakdown by airline for that date
         airline_query = f"""
