@@ -109,9 +109,9 @@ PROJECTFLIGHTS-GROUP8/
 ### Git workflow
 | Step | Command |
 |------|---------|
-| **Clone the repository** | `git clone https://github.com/oyoYnaY/projectFlights-group8.git` |
+| **Clone the repository** | `git clone [https://github.com/oyoYnaY/projectFlights-group8.git](https://github.com/Adel13Lis/group8-FlightsProject.git)` |
 | **Fetch origin** | `git fetch origin` |
-| **Create a new branch && Switch to the new branch** | `git checkout -b 6-add-linkes-to-readme` |
+| **Create a new branch && Switch to the new branch** | `git checkout -b feature-branch-name` |
 | **Switch to an existing branch** | `git checkout branch-name` |
 | **Commit changes** | `git add . && git commit -m "Your commit message"` |
 | **Push to remote repository** | `git push origin feature-branch-name` |
