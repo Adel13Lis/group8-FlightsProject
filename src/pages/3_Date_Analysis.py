@@ -3,12 +3,14 @@ import sqlite3
 import pandas as pd
 import altair as alt
 from datetime import datetime
+import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..',
-                       '..', "flights_database.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "..",
+                       "..", "flights_database.db")
+
 
 def load_data(query):
-    with sqlite3.connect("flights_database.db") as conn:
+    with sqlite3.connect(DB_PATH) as conn:
         df = pd.read_sql_query(query, conn)
     return df
 
@@ -164,10 +166,12 @@ if selected_date:
         int(df_date_stats["flight_count"][0]) if not df_date_stats.empty else 0
     )
     avg_dep_delay = (
-        round(df_date_stats["avg_dep_delay"][0], 2) if not df_date_stats.empty else None
+        round(df_date_stats["avg_dep_delay"][0],
+              2) if not df_date_stats.empty else None
     )
     avg_arr_delay = (
-        round(df_date_stats["avg_arr_delay"][0], 2) if not df_date_stats.empty else None
+        round(df_date_stats["avg_arr_delay"][0],
+              2) if not df_date_stats.empty else None
     )
 
     if flight_count > 0:
@@ -246,5 +250,3 @@ if selected_date:
 
     else:
         st.warning("No flights found on this date.")
-
-
