@@ -5,8 +5,7 @@ import altair as alt
 from datetime import datetime
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..",
-                       "..", "flights_database.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "flights_database.db")
 
 
 def load_data(query):
